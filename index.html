@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DEADLOCK SIX7CUP</title>
+    <link href="https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&family=Cinzel:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            --accent: #c9a53b; --accent-light: #f5d37c; --accent-rgb: 201,165,59; --accent-emoji: "⚜️";
+            font-family: 'Segoe UI', 'Arial', sans-serif; font-weight: 600;
+            min-height: 100vh; display: flex; color: #d4dce6;
+            background: #0a0d13;
+            background-image: 
+                radial-gradient(circle at 20% 30%, rgba(201,165,59,0.08) 0%, transparent 30%),
+                radial-gradient(circle at 80% 70%, rgba(100,181,246,0.06) 0%, transparent 35%),
+                radial-gradient(circle at 40% 80%, rgba(201,165,59,0.04) 0%, transparent 40%),
+                repeating-linear-gradient(45deg, rgba(20,26,36,0.4) 0px, rgba(20,26,36,0.4) 2px, transparent 2px, transparent 15px);
+            transition: background 0.3s;
+        }
+        body.theme-yellow { --accent:#c9a53b; --accent-light:#f5d37c; --accent-rgb:201,165,59; --accent-emoji:"⚜️"; }
+        body.theme-purple { --accent:#9b59b6; --accent-light:#d4a5e8; --accent-rgb:155,89,182; --accent-emoji:"🔮"; }
+        body.theme-green { --accent:#27ae60; --accent-light:#6fda9a; --accent-rgb:39,174,96; --accent-emoji:"🍃"; }
+        body.theme-red { --accent:#e74c3c; --accent-light:#f5a09a; --accent-rgb:231,76,60; --accent-emoji:"🔥"; }
+        body.theme-blue { --accent:#3498db; --accent-light:#85c1e9; --accent-rgb:52,152,219; --accent-emoji:"💎"; }
+        body.light-mode { --bg:#f0f2f5; --card-bg:#ffffff; --text:#1a1a1a; --text-secondary:#555; --border:#ddd; }
+        body.dark-mode { --bg:#0a0d13; --card-bg:#11161ee0; --text:#d4dce6; --text-secondary:#8a9bb5; --border:#2a3441; }
+
+        /* ЛЕНДИНГ */
+        .landing { position:fixed; inset:0; background:#0a0d13; z-index:1000; display:flex; flex-direction:column; align-items:center; justify-content:center; transition:0.5s; }
+        .landing.hidden { opacity:0; pointer-events:none; }
+        .seal-btn { background:0; border:4px solid var(--accent); color:var(--accent-light); font-size:3rem; font-weight:900; padding:30px 60px; border-radius:100px; cursor:pointer; letter-spacing:8px; text-shadow:0 0 20px var(--accent); box-shadow:0 0 40px rgba(var(--accent-rgb),0.5); animation:pulse 2s infinite; }
+        .seal-btn.shake { animation:shake 0.25s ease, pulse 2s infinite; }
+        .shake-hard { animation:shakeHard 0.06s infinite !important; }
+        @keyframes pulse { 0%,100%{box-shadow:0 0 40px rgba(var(--accent-rgb),0.5);} 50%{box-shadow:0 0 70px var(--accent);} }
+        @keyframes shake { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-12px) rotate(-2deg);} 75%{transform:translateX(12px) rotate(2deg);} }
+        @keyframes shakeHard { 0%,100%{transform:translate(0,0);} 20%{transform:translate(-15px,5px);} 40%{transform:translate(15px,-5px);} 60%{transform:translate(-10px,10px);} 80%{transform:translate(10px,-10px);} }
+        .click-counter { position:absolute; bottom:50px; color:var(--accent); opacity:0.15; }
+
+        /* ОВЕРЛЕЙ */
+        .overlay { position:fixed; inset:0; background:#0a0d13; z-index:2000; display:none; align-items:center; justify-content:center; }
+        .overlay.visible { display:flex; }
+        .overlay-msg { font-size:4rem; font-weight:900; color:var(--accent-light); text-shadow:0 0 50px #f44,0 0 100px var(--accent); animation:fadeScale 1s ease forwards; }
+        @keyframes fadeScale { 0%{opacity:0;transform:scale(0.7);} 20%{opacity:1;transform:scale(1);} 80%{opacity:1;} 100%{opacity:0;transform:scale(1.2);} }
+
+        /* ОСНОВНОЙ ИНТЕРФЕЙС */
+        .app { display:flex; width:100%; max-width:1600px; margin:20px auto; gap:20px; opacity:0; transition:0.5s; }
+        .app.visible { opacity:1; }
+
+        /* БОКОВОЕ МЕНЮ */
+        .sidebar { width:100px; background:#11161ee0; backdrop-filter:blur(10px); border-radius:30px; padding:30px 0; display:flex; flex-direction:column; align-items:center; gap:30px; border:1px solid var(--accent); }
+        .sidebar-btn { width:70px; height:70px; background:#1a232e; border:3px solid var(--accent); border-radius:20px; display:flex; align-items:center; justify-content:center; font-size:2rem; cursor:pointer; transition:0.15s; color:var(--accent-light); position:relative; }
+        .sidebar-btn:hover, .sidebar-btn.active { background:var(--accent); color:#0a0d13; }
+        .sidebar-btn:hover::after { content:attr(data-tooltip); position:fixed; background:#1a232e; padding:8px 15px; border-radius:10px; font-size:0.9rem; white-space:nowrap; border:1px solid var(--accent); color:var(--accent-light); z-index:9999; pointer-events:none; transform:translateX(10px); box-shadow:0 4px 15px rgba(0,0,0,0.5); }
+
+        /* ОСНОВНОЙ КОНТЕНТ */
+        .main { flex:1; display:flex; flex-direction:column; gap:20px; }
+        .header { background:#11161ee0; backdrop-filter:blur(10px); border-radius:30px; padding:20px 30px; border:1px solid var(--accent); display:flex; align-items:center; justify-content:space-between; }
+        h1 { font-size:2.5rem; color:var(--accent-light); text-shadow:0 0 20px var(--accent); letter-spacing:3px; }
+        .medieval { font-family:'UnifrakturMaguntia', cursive; font-size:1.8rem; color:var(--accent-light); }
+        .auth-area { display:flex; gap:10px; align-items:center; }
+        .auth-btn { background:0; border:1px solid var(--accent); color:var(--accent); padding:8px 16px; border-radius:30px; cursor:pointer; font-size:0.9rem; transition:0.15s; }
+        .auth-btn:hover { background:var(--accent); color:#0a0d13; }
+        .user-info { display:flex; align-items:center; gap:10px; }
+        .user-nick { font-family:'Cinzel', serif; color:var(--accent-light); font-size:1.1rem; }
+
+        /* ЧАТ */
+        .chat-container { position:fixed; bottom:20px; right:20px; width:300px; background:#11161ee0; backdrop-filter:blur(10px); border-radius:20px; border:2px solid var(--accent); z-index:500; overflow:hidden; transition:0.3s; }
+        .chat-header { background:#1a232e; padding:12px 15px; color:var(--accent-light); font-weight:bold; display:flex; justify-content:space-between; cursor:pointer; border-bottom:1px solid var(--accent); }
+        .chat-messages { height:250px; overflow-y:auto; padding:15px; display:flex; flex-direction:column; gap:8px; }
+        .chat-message { background:#0e131b; padding:8px 12px; border-radius:12px; font-size:0.9rem; }
+        .chat-message .nick { color:var(--accent); font-weight:bold; }
+        .chat-input-area { display:flex; padding:10px; gap:8px; border-top:1px solid #2a3441; }
+        .chat-input { flex:1; padding:10px; background:#0a0d13; border:1px solid #2a3441; border-radius:20px; color:#d4dce6; }
+        .chat-send { background:var(--accent); border:0; padding:8px 15px; border-radius:20px; color:#0a0d13; font-weight:bold; cursor:pointer; }
+        .chat-minimized .chat-messages, .chat-minimized .chat-input-area { display:none; }
+        .chat-minimized { height:auto; }
+
+        /* КОНТЕНТНАЯ ОБЛАСТЬ */
+        .content { background:#11161ee0; backdrop-filter:blur(10px); border-radius:30px; padding:30px; border:1px solid var(--accent); min-height:500px; }
+        .sub-tabs { display:flex; gap:15px; margin-bottom:25px; flex-wrap:wrap; }
+        .sub-tab { background:#1a232e; border:2px solid var(--accent); color:var(--accent-light); padding:10px 20px; border-radius:40px; cursor:pointer; font-weight:bold; transition:0.15s; }
+        .sub-tab:hover, .sub-tab.active { background:var(--accent); color:#0a0d13; }
+
+        /* ФУТЕР */
+        .footer { background:#11161ee0; backdrop-filter:blur(10px); border-radius:30px; padding:20px 30px; border:1px solid var(--accent); display:flex; justify-content:space-between; align-items:center; }
+        .quotes { display:flex; gap:30px; font-style:italic; color:#8a9bb5; }
+        .signature { color:var(--accent); opacity:0.7; }
+
+        /* ТАБЛИЦЫ */
+        .rating-table { width:100%; border-collapse:collapse; }
+        .rating-table th { background:#1a232e; padding:12px; color:var(--accent-light); text-align:left; }
+        .rating-table td { padding:10px; border-bottom:1px solid #2a3441; }
+        .rank-badge { padding:4px 12px; border-radius:20px; font-weight:bold; font-size:0.85rem; }
+        .eternus { background:linear-gradient(135deg,#ffd700,#ff8c00); color:#000; }
+        .oracle { background:#9b59b6; color:#fff; }
+        .archon { background:#3498db; color:#fff; }
+        .ritualist { background:#e67e22; color:#fff; }
+        .arcanist { background:#1abc9c; color:#fff; }
+        .alchemist { background:#95a5a6; color:#000; }
+        .cursed { background:#8B0000; color:#fff; }
+        .ascendant { background:#e74c3c; color:#fff; }
+        .phantom { background:#2ecc71; color:#000; }
+        .emissary { background:#f39c12; color:#000; }
+        .seeker { background:#34495e; color:#fff; }
+        .initiate { background:#7f8c8d; color:#fff; }
+
+        input, select { width:100%; padding:14px; background:#0a0d13; border:1px solid #2a3441; border-radius:12px; color:#d4dce6; font-size:1rem; margin-bottom:10px; }
+        input:focus, select:focus { outline:none; border-color:var(--accent); }
+        button { cursor:pointer; }
+        .password-wrap { position:relative; display:flex; align-items:center; }
+        .password-wrap input { padding-right:40px; }
+        .eye { position:absolute; right:8px; background:0; border:0; color:#8a9bb5; font-size:1.2rem; padding:0; width:24px; height:24px; display:flex; align-items:center; justify-content:center; }
+
+        .hidden { display:none !important; }
+        .theme-dot { width:35px; height:35px; border-radius:50%; cursor:pointer; border:2px solid transparent; }
+        .theme-dot.active { border-color:#fff; }
+
+        /* Профиль */
+        .profile-card { background:#1a232e; padding:25px; border-radius:20px; }
+        .achievement-badge { display:inline-block; padding:5px 12px; background:var(--accent); color:#0a0d13; border-radius:20px; font-size:0.8rem; margin:3px; }
+    </style>
+</head>
+<body class="theme-yellow">
+
+<!-- ЛЕНДИНГ -->
+<div class="landing" id="landing">
+    <button class="seal-btn" id="sealBtn">СОРВАТЬ ПЕЧАТЬ</button>
+    <div class="click-counter" id="counter">1 / 3</div>
+</div>
+
+<!-- ОВЕРЛЕЙ -->
+<div class="overlay" id="overlay"><div class="overlay-msg" id="overlayMsg"></div></div>
+
+<!-- ОСНОВНОЙ ИНТЕРФЕЙС -->
+<div class="app" id="app">
+    <div class="sidebar">
+        <div class="sidebar-btn active" data-tab="news" data-tooltip="Новости">📰</div>
+        <div class="sidebar-btn" data-tab="rating" data-tooltip="Рейтинг">🏆</div>
+        <div class="sidebar-btn" data-tab="tournament" data-tooltip="Турнирная сетка">🏁</div>
+        <div class="sidebar-btn" data-tab="match" data-tooltip="Матчи">⚔️</div>
+        <div class="sidebar-btn" data-tab="info" data-tooltip="Информация">📜</div>
+        <div style="flex:1"></div>
+        <div class="sidebar-btn" data-tab="betting" data-tooltip="Ставки">🎲</div>
+        <div class="sidebar-btn" data-tab="daily" data-tooltip="Ежедневные бонусы">🎁</div>
+        <div class="sidebar-btn" id="themeToggleBtn" data-tooltip="Сменить тему">🌓</div>
+        <div class="sidebar-btn" id="settingsBtn" data-tooltip="Настройки">⚙️</div>
+    </div>
+
+    <div class="main">
+        <div class="header">
+            <div style="display:flex; align-items:center; gap:20px;">
+                <h1><span id="themeEmoji">⚜️</span> SIX7CUP</h1>
+                <span class="medieval">ArchMother ⚔️ Hidden King</span>
+            </div>
+            <div class="auth-area" id="authArea">
+                <div id="loggedOut"><button class="auth-btn" id="loginBtn">Войти</button><button class="auth-btn" id="regBtn">Регистрация</button></div>
+                <div id="loggedIn" class="user-info hidden"><span class="user-nick" id="userNick"></span><span id="adminBadge" style="background:var(--accent);color:#0a0d13;padding:2px 8px;border-radius:20px;font-size:0.7rem;" class="hidden">ADMIN</span><button class="auth-btn" id="logoutBtn">Выйти</button></div>
+            </div>
+        </div>
+
+        <div class="content" id="contentArea">
+            <div id="tab-news"><div style="text-align:center;padding:50px;">📰 Новости появятся позже</div></div>
+            <div id="tab-rating" class="hidden"><div class="sub-tabs"><div class="sub-tab active" data-rating="top">🏅 Топ</div><div class="sub-tab" data-rating="system">📊 Система</div></div><div id="ratingContent"></div></div>
+            <div id="tab-tournament" class="hidden"><div style="text-align:center;padding:50px;">🏁 Турнирная сетка появится позже</div></div>
+            <div id="tab-match" class="hidden"><div class="sub-tabs"><div class="sub-tab active" data-match="find">🔍 Найти матч</div><div class="sub-tab" data-match="create">➕ Создать матч</div></div><div id="matchContent"></div></div>
+            <div id="tab-info" class="hidden"><div class="sub-tabs"><div class="sub-tab active" data-sub="rules">Правила</div><div class="sub-tab" data-sub="banpick">Бан/Пик</div><div class="sub-tab" data-sub="cap">Кто такой кэп</div><div class="sub-tab" data-sub="pick">Пик игроков</div></div><div id="subContent"></div></div>
+            <div id="tab-betting" class="hidden"><div style="text-align:center;padding:50px;">🎲 Система ставок появится позже</div></div>
+            <div id="tab-daily" class="hidden"><div style="text-align:center;padding:50px;">🎁 Ежедневные бонусы появятся позже</div></div>
+        </div>
+
+        <div class="footer">
+            <div class="quotes"><span>«6 героев. 7 грехов. 0 шансов»</span><span>«67 — не возраст, это диагноз»</span><span>«Мидбосс — мой единственный друг»</span></div>
+            <div class="signature">— Barry Dylan</div>
+        </div>
+    </div>
+</div>
+
+<!-- ЧАТ -->
+<div class="chat-container chat-minimized" id="chatContainer">
+    <div class="chat-header" id="chatHeader"><span>💬 Чат SIX7CUP</span><span id="chatToggle">▼</span></div>
+    <div class="chat-messages" id="chatMessages"></div>
+    <div class="chat-input-area"><input type="text" class="chat-input" id="chatInput" placeholder="Сообщение..."><button class="chat-send" id="chatSend">➤</button></div>
+</div>
+
+<!-- ШАБЛОНЫ -->
+<div id="tpl-rules" class="hidden"><div style="background:#1a232e;padding:25px;border-radius:16px;"><h3 style="color:var(--accent-light);margin-bottom:15px;">📜 ПОЛНЫЕ ПРАВИЛА SIX7CUP</h3><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:20px;"><div><h4 style="color:var(--accent);">Основные правила</h4><ul style="line-height:2;margin-left:20px;"><li>Формат: 6x6 стандартный матч BO3</li><li>Запрещены читы и эксплойты</li><li>Замены игроков только с разрешения админа</li><li>Опаздание на матч >15 мин = тех. поражение</li><li>Запрещено оскорблять других игроков</li><li>Спорные моменты решает админ</li></ul></div><div><h4 style="color:var(--accent);">Система кэпов</h4><ul style="line-height:2;margin-left:20px;"><li>Капитан выбирается командой до турнира</li><li>Кэп кидает монетку за команду</li><li>Кэп называет баны и пики</li><li>Решение кэпа — окончательное</li></ul></div><div><h4 style="color:var(--accent);">Герои</h4><ul style="line-height:2;margin-left:20px;"><li>Все герои активны</li><li>Зеркальные герои запрещены</li><li>Баны: 3 на команду (всего 6)</li></ul></div><div><h4 style="color:var(--accent);">Дисциплина</h4><ul style="line-height:2;margin-left:20px;"><li>Флейм = предупреждение</li><li>3 предупреждения = дисквалификация</li><li>Уважайте соперников и судей</li><li>Fair Play превыше всего</li></ul></div></div></div></div>
+
+<div id="tpl-banpick" class="hidden"><table class="rating-table"><tr><th>Этап</th><th>Действие</th><th>Кто</th></tr><tr style="background:#151e28;"><td colspan="3">Волна 1</td></tr><tr><td>1</td><td>Бан #1</td><td style="color:#64b5f6;">А</td></tr><tr><td>2</td><td>Бан #2</td><td style="color:#ff8a65;">Б</td></tr><tr><td>3</td><td>Пик #1</td><td style="color:#ff8a65;">Б</td></tr><tr><td>4</td><td>Пик #2-3</td><td style="color:#64b5f6;">А</td></tr><tr style="background:#151e28;"><td colspan="3">Волна 2</td></tr><tr><td>5</td><td>Бан #3</td><td style="color:#64b5f6;">А</td></tr><tr><td>6</td><td>Бан #4</td><td style="color:#ff8a65;">Б</td></tr><tr><td>7</td><td>Пик #4-5</td><td style="color:#ff8a65;">Б</td></tr><tr><td>8</td><td>Пик #6-7</td><td style="color:#64b5f6;">А</td></tr><tr style="background:#151e28;"><td colspan="3">Волна 3</td></tr><tr><td>9</td><td>Бан #5</td><td style="color:#64b5f6;">А</td></tr><tr><td>10</td><td>Бан #6</td><td style="color:#ff8a65;">Б</td></tr><tr><td>11</td><td>Пик #8-9</td><td style="color:#ff8a65;">Б</td></tr><tr><td>12</td><td>Пик #10-11</td><td style="color:#64b5f6;">А</td></tr><tr><td>13</td><td>Пик #12</td><td style="color:#ff8a65;">Б</td></tr></table><div style="text-align:center;margin-top:15px;">🔽 Б АА ББ АА ББ АА Б</div></div>
+
+<div id="tpl-cap" class="hidden"><div style="background:#1a232e;padding:25px;border-radius:16px;"><p style="font-size:1.2rem;margin-bottom:15px;"><span style="color:var(--accent-light);font-weight:bold;">Капитан (кэп)</span> — лидер команды, принимает финальные решения во время драфта.</p><div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;"><div style="background:#11161e;padding:20px;border-radius:12px;"><div style="color:#64b5f6;font-weight:bold;font-size:1.2rem;">🗣️ Обязанности:</div><ul style="line-height:2;"><li>Кидает монетку</li><li>Называет баны</li><li>Называет пики</li><li>Следит за таймером</li><li>Разруливает споры</li></ul></div><div style="background:#11161e;padding:20px;border-radius:12px;"><div style="color:#ff8a65;font-weight:bold;font-size:1.2rem;">👥 Команда:</div><ul style="line-height:2;"><li>Предлагает варианты</li><li>Советуется в войсе</li><li>Доверяет кэпу</li><li>Готовится играть на любом герое</li></ul></div></div></div></div>
+
+<div id="tpl-pick" class="hidden"><div style="display:flex;justify-content:center;gap:8px;margin:20px 0;"><span style="background:#2a4a6b;padding:15px 20px;border-radius:12px;color:#90caf9;">1</span><span>→</span><span style="background:#6b2a2a;padding:15px 20px;border-radius:12px;color:#ffab91;">2</span><span>→</span><span style="background:#2a4a6b;padding:15px 20px;border-radius:12px;color:#90caf9;">1</span><span>→</span><span style="background:#6b2a2a;padding:15px 20px;border-radius:12px;color:#ffab91;">2</span><span>→</span><span style="background:#2a4a6b;padding:15px 20px;border-radius:12px;color:#90caf9;">1</span><span>→</span><span style="background:#6b2a2a;padding:15px 20px;border-radius:12px;color:#ffab91;">2</span><span>→</span><span style="background:#2a4a6b;padding:15px 20px;border-radius:12px;color:#90caf9;">1</span><span>→</span><span style="background:#6b2a2a;padding:15px 20px;border-radius:12px;color:#ffab91;">2</span><span>→</span><span style="background:#6b2a2a;padding:15px 20px;border-radius:12px;color:#ffab91;">2</span><span>→</span><span style="background:#2a4a6b;padding:15px 20px;border-radius:12px;color:#90caf9;">1</span></div><p style="text-align:center;"><span style="color:var(--accent-light);">1</span> — первая команда, <span style="color:var(--accent-light);">2</span> — вторая</p></div>
+
+<div id="tpl-top" class="hidden"><table class="rating-table"><tr><th>Место</th><th>Игрок</th><th>Очки</th><th>Ранг</th></tr><tr><td>1</td><td>DanBrosCrut</td><td>18349</td><td><span class="rank-badge eternus">ETERNUS</span></td></tr><tr><td>2</td><td>Nair</td><td>14984</td><td><span class="rank-badge oracle">ORACLE</span></td></tr><tr><td>3</td><td>Barry Dylan</td><td>14025</td><td><span class="rank-badge oracle">ORACLE</span></td></tr><tr><td>4</td><td>kulttisurita</td><td>13952</td><td><span class="rank-badge oracle">ORACLE</span></td></tr><tr><td>5</td><td>Rafaelka_0</td><td>12626</td><td><span class="rank-badge archon">ARCHON</span></td></tr><tr><td>6</td><td>Syxarik</td><td>12004</td><td><span class="rank-badge archon">ARCHON</span></td></tr><tr><td>7</td><td>KjRj</td><td>8059</td><td><span class="rank-badge ritualist">RITUALIST</span></td></tr><tr><td>8</td><td>rb4ka</td><td>7669</td><td><span class="rank-badge arcanist">ARCANIST</span></td></tr><tr><td>9</td><td>shtefan_nein</td><td>7164</td><td><span class="rank-badge arcanist">ARCANIST</span></td></tr><tr><td>10</td><td>Matt</td><td>6917</td><td><span class="rank-badge alchemist">ALCHEMIST</span></td></tr><tr><td>11</td><td>allmutekotek</td><td>6415</td><td><span class="rank-badge alchemist">ALCHEMIST</span></td></tr></table></div>
+
+<div id="tpl-system" class="hidden"><div style="background:#1a232e;padding:20px;border-radius:16px;"><p>Рейтинг работает на основе статистики во многих матчах. Берутся игры и каждый параметр считается по среднему арифметическому. Хилл саппортов и хилл кора имеют разные цифры и показатели.</p><h3 style="margin:20px 0;">📋 Таблица рангов</h3><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;"><div style="background:#0e131b;padding:10px;border-radius:8px;display:flex;justify-content:space-between;"><span>CURSED</span><span class="rank-badge cursed">20000</span></div><div style="background:#0e131b;padding:10px;border-radius:8px;display:flex;justify-content:space-between;"><span>ETERNUS</span><span class="rank-badge eternus">18000</span></div><div style="background:#0e131b;padding:10px;border-radius:8px;display:flex;justify-content:space-between;"><span>ASCENDANT</span><span class="rank-badge ascendant">17000</span></div><div style="background:#0e131b;padding:10px;border-radius:8px;display:flex;justify-content:space-between;"><span>PHANTOM</span><span class="rank-badge phantom">15000</span></div><div style="background:#0e131b;padding:10px;border-radius:8px;display:flex;justify-content:space-between;"><span>ORACLE</span><span class="rank-badge oracle">13000</span></div><div style="background:#0e131b;padding:10px;border-radius:8px;display:flex;justify-content:space-between;"><span>ARCHON</span><span class="rank-badge archon">11000</span></div><div style="background:#0e131b;padding:10px;border-radius:8px;display:flex;justify-content:space-between;"><span>EMISSARY</span><span class="rank-badge emissary">10000</span></div><div style="background:#0e131b;padding:10px;border-radius:8px;display:flex;justify-content:space-between;"><span>RITUALIST</span><span class="rank-badge ritualist">8000</span></div><div style="background:#0e131b;padding:10px;border-radius:8px;display:flex;justify-content:space-between;"><span>ARCANIST</span><span class="rank-badge arcanist">7000</span></div><div style="background:#0e131b;padding:10px;border-radius:8px;display:flex;justify-content:space-between;"><span>ALCHEMIST</span><span class="rank-badge alchemist">5000</span></div><div style="background:#0e131b;padding:10px;border-radius:8px;display:flex;justify-content:space-between;"><span>SEEKER</span><span class="rank-badge seeker">4000</span></div><div style="background:#0e131b;padding:10px;border-radius:8px;display:flex;justify-content:space-between;"><span>INITIATE</span><span class="rank-badge initiate">2000</span></div></div></div></div>
+
+<div id="tpl-find-match" class="hidden"><div id="matchesList"></div></div>
+<div id="tpl-create-match" class="hidden"><div style="background:#1a232e;padding:25px;border-radius:16px;max-width:500px;"><h3 style="color:var(--accent-light);margin-bottom:20px;">➕ Создать матч</h3><input type="text" id="matchName" placeholder="Название матча"><select id="matchMode"><option value="6x6 обычная">6x6 обычная игра</option><option value="4x4 уличная">4x4 уличная</option><option value="2x2 уличная">2x2 уличная</option><option value="3x3 уличная">3x3 уличная</option></select><input type="datetime-local" id="matchDate"><button id="createMatchBtn" style="width:100%;padding:14px;background:var(--accent);border:0;border-radius:12px;font-weight:bold;">Создать</button></div></div>
+
+<!-- АВТОРИЗАЦИЯ И НАСТРОЙКИ -->
+<div id="authPanel" class="overlay"><div style="background:#11161e;padding:30px;border-radius:30px;max-width:400px;width:100%;border:2px solid var(--accent);"><h2 id="authTitle">ВХОД</h2><input type="text" id="authNick" placeholder="Никнейм"><div class="password-wrap"><input type="password" id="authPass" placeholder="Пароль"><button class="eye" id="togglePass">👁️</button></div><button style="width:100%;padding:14px;margin-top:15px;background:var(--accent);border:0;border-radius:12px;font-weight:bold;" id="authSubmit">Войти</button><p style="margin-top:15px;text-align:center;"><span id="authToggleText">Нет аккаунта?</span> <a href="#" id="authToggle" style="color:var(--accent);">Зарегистрироваться</a></p><p id="authErr" style="color:#f66;"></p><button style="width:100%;padding:10px;margin-top:10px;background:0;border:1px solid #2a3441;color:#8a9bb5;border-radius:12px;" id="closeAuth">Закрыть</button></div></div>
+
+<div id="settingsPanel" class="overlay"><div style="background:#11161e;padding:30px;border-radius:30px;max-width:400px;width:100%;border:2px solid var(--accent);"><h2>⚙️ НАСТРОЙКИ</h2><h3>Цвет</h3><div style="display:flex;gap:10px;margin:15px 0;"><div class="theme-dot theme-yellow-opt active" data-theme="yellow" style="background:#c9a53b;"></div><div class="theme-dot" data-theme="purple" style="background:#9b59b6;"></div><div class="theme-dot" data-theme="green" style="background:#27ae60;"></div><div class="theme-dot" data-theme="red" style="background:#e74c3c;"></div><div class="theme-dot" data-theme="blue" style="background:#3498db;"></div></div><button id="saveTheme" style="width:100%;padding:12px;background:var(--accent);border:0;border-radius:12px;">💾 Сохранить и закрыть</button><h3>Смена ника</h3><input type="text" id="newNick" placeholder="Новый ник"><button id="changeNick" style="width:100%;padding:12px;margin-top:10px;background:var(--accent);border:0;border-radius:12px;">Сменить</button><p id="nickErr" style="color:#f66;"></p><button id="logoutSettings" style="width:100%;padding:12px;margin-top:10px;background:#6b2a2a;color:#ffab91;border:0;border-radius:12px;">🚪 Выйти</button><button id="closeSettings" style="width:100%;padding:10px;margin-top:10px;background:0;border:1px solid #2a3441;color:#8a9bb5;border-radius:12px;">Закрыть</button></div></div>
+
+<script>
+(function(){
+    let users = JSON.parse(localStorage.getItem('u')) || [];
+    let matches = JSON.parse(localStorage.getItem('m')) || [];
+    if(!users.some(u=>u.nick==='Barry Dylan')) users.push({nick:'Barry Dylan',pass:'locer228',admin:true});
+    localStorage.setItem('u', JSON.stringify(users));
+    let curUser = JSON.parse(localStorage.getItem('cur')) || null;
+    let theme = localStorage.getItem('th') || 'yellow';
+    let pendingTheme = theme;
+    document.body.className = 'theme-'+theme;
+    document.getElementById('themeEmoji').textContent = document.body.style.getPropertyValue('--accent-emoji') || '⚜️';
+
+    const landing=document.getElementById('landing'), seal=document.getElementById('sealBtn'), counter=document.getElementById('counter');
+    const overlay=document.getElementById('overlay'), omsg=document.getElementById('overlayMsg'), app=document.getElementById('app');
+    const authPanel=document.getElementById('authPanel'), settingsPanel=document.getElementById('settingsPanel');
+    
+    let audioCtx=null;
+    function playSound(){ try{
+        if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+        if(audioCtx.state==='suspended') audioCtx.resume();
+        let o1=audioCtx.createOscillator(), o2=audioCtx.createOscillator(), g=audioCtx.createGain();
+        o1.connect(g); o2.connect(g); g.connect(audioCtx.destination);
+        o1.type='sawtooth'; o2.type='triangle';
+        o1.frequency.setValueAtTime(100,audioCtx.currentTime); o1.frequency.exponentialRampToValueAtTime(40,audioCtx.currentTime+0.4);
+        o2.frequency.setValueAtTime(150,audioCtx.currentTime); o2.frequency.exponentialRampToValueAtTime(60,audioCtx.currentTime+0.4);
+        g.gain.setValueAtTime(0.2,audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.01,audioCtx.currentTime+0.6);
+        o1.start(); o2.start(); o1.stop(audioCtx.currentTime+0.6); o2.stop(audioCtx.currentTime+0.6);
+    }catch(e){} }
+
+    function updateUI(){
+        if(curUser){
+            document.getElementById('loggedOut').classList.add('hidden');
+            document.getElementById('loggedIn').classList.remove('hidden');
+            document.getElementById('userNick').textContent=curUser.nick;
+            document.getElementById('adminBadge').classList.toggle('hidden',!curUser.admin);
+        } else {
+            document.getElementById('loggedOut').classList.remove('hidden');
+            document.getElementById('loggedIn').classList.add('hidden');
+        }
+    }
+
+    let clicks=0;
+    seal.addEventListener('click',()=>{
+        clicks++; counter.textContent=clicks+' / 3'; seal.classList.add('shake'); setTimeout(()=>seal.classList.remove('shake'),250);
+        if(clicks>=3){
+            landing.classList.add('hidden'); overlay.classList.add('visible'); omsg.textContent='ПЕЧАТЬ СОРВАНА';
+            setTimeout(()=>{ overlay.classList.remove('visible');
+                setTimeout(()=>{ overlay.classList.add('visible'); omsg.textContent='ПОКРОВИТЕЛИ НЕГОДУЮТ';
+                    document.body.classList.add('shake-hard'); playSound();
+                    setTimeout(()=>{ document.body.classList.remove('shake-hard'); overlay.classList.remove('visible'); app.classList.add('visible'); updateUI(); },2000);
+                },100);
+            },1000);
+        }
+    });
+
+    function setTheme(t,save){
+        document.body.className='theme-'+t;
+        document.querySelectorAll('.theme-dot').forEach(d=>d.classList.remove('active'));
+        document.querySelector(`.theme-dot[data-theme="${t}"]`).classList.add('active');
+        let emoji = {'yellow':'⚜️','purple':'🔮','green':'🍃','red':'🔥','blue':'💎'}[t] || '⚜️';
+        document.getElementById('themeEmoji').textContent = emoji;
+        if(save){ localStorage.setItem('th',t); theme=t; } pendingTheme=t;
+    }
+    document.querySelectorAll('.theme-dot').forEach(d=>d.addEventListener('click',()=>setTheme(d.dataset.theme,false)));
+    document.getElementById('saveTheme').addEventListener('click',()=>{ setTheme(pendingTheme,true); settingsPanel.classList.remove('visible'); });
+    document.getElementById('closeSettings').addEventListener('click',()=>settingsPanel.classList.remove('visible'));
+
+    // Чат
+    const chatCont=document.getElementById('chatContainer'), chatHead=document.getElementById('chatHeader');
+    let chatMsgs=[];
+    function renderChat(){ document.getElementById('chatMessages').innerHTML=chatMsgs.slice(-20).map(m=>`<div class="chat-message"><span class="nick">${m.nick}:</span> ${m.text}</div>`).join(''); }
+    document.getElementById('chatHeader').addEventListener('click',()=>chatCont.classList.toggle('chat-minimized'));
+    document.getElementById('chatSend').addEventListener('click',()=>{
+        let inp=document.getElementById('chatInput'); if(!inp.value.trim()||!curUser) return;
+        chatMsgs.push({nick:curUser.nick,text:inp.value.trim()}); renderChat(); inp.value='';
+    });
+    document.getElementById('chatInput').addEventListener('keypress',e=>{ if(e.key==='Enter') document.getElementById('chatSend').click(); });
+
+    // Вкладки
+    const tabs={news:document.getElementById('tab-news'),rating:document.getElementById('tab-rating'),tournament:document.getElementById('tab-tournament'),match:document.getElementById('tab-match'),info:document.getElementById('tab-info'),betting:document.getElementById('tab-betting'),daily:document.getElementById('tab-daily')};
+    document.querySelectorAll('.sidebar-btn[data-tab]').forEach(b=>b.addEventListener('click',function(){
+        let tab=this.dataset.tab; if(!tab) return;
+        Object.values(tabs).forEach(t=>t.classList.add('hidden')); tabs[tab].classList.remove('hidden');
+        document.querySelectorAll('.sidebar-btn').forEach(b=>b.classList.remove('active')); this.classList.add('active');
+        if(tab==='rating') showRating('top'); if(tab==='match') showMatch('find');
+    }));
+
+    const subContent=document.getElementById('subContent');
+    document.querySelectorAll('[data-sub]').forEach(s=>s.addEventListener('click',function(){
+        let sub=this.dataset.sub;
+        document.querySelectorAll('[data-sub]').forEach(s=>s.classList.remove('active')); this.classList.add('active');
+        let clone=document.getElementById('tpl-'+sub).cloneNode(true); clone.classList.remove('hidden'); subContent.innerHTML=''; subContent.appendChild(clone);
+    }));
+
+    const ratingContent=document.getElementById('ratingContent');
+    function showRating(t){
+        document.querySelectorAll('[data-rating]').forEach(s=>s.classList.remove('active'));
+        document.querySelector(`[data-rating="${t}"]`).classList.add('active');
+        let clone=document.getElementById('tpl-'+t).cloneNode(true); clone.classList.remove('hidden'); ratingContent.innerHTML=''; ratingContent.appendChild(clone);
+    }
+    document.querySelectorAll('[data-rating]').forEach(s=>s.addEventListener('click',function(){ showRating(this.dataset.rating); }));
+
+    const matchContent=document.getElementById('matchContent');
+    function showMatch(t){
+        document.querySelectorAll('[data-match]').forEach(s=>s.classList.remove('active'));
+        document.querySelector(`[data-match="${t}"]`).classList.add('active');
+        if(t==='find'){ renderMatches(); }
+        else { let clone=document.getElementById('tpl-create-match').cloneNode(true); clone.classList.remove('hidden'); matchContent.innerHTML=''; matchContent.appendChild(clone); }
+    }
+    function renderMatches(){
+        let cont=document.createElement('div');
+        if(!matches.length) cont.innerHTML='<div style="color:#8a9bb5;padding:20px;">Нет созданных матчей</div>';
+        else matches.forEach((m,i)=>{ let card=document.createElement('div'); card.style.cssText='background:#1a232e;padding:20px;border-radius:16px;margin-bottom:15px;';
+            card.innerHTML=`<div style="font-size:1.3rem;color:var(--accent-light);">${m.name}</div><div style="display:flex;gap:30px;color:#8a9bb5;margin:10px 0;">${m.mode} | ${m.date}</div><button class="match-join" data-i="${i}" style="background:var(--accent);border:0;padding:10px 25px;border-radius:30px;font-weight:bold;">🔗 Подключиться</button>`;
+            cont.appendChild(card);
+        });
+        matchContent.innerHTML=''; matchContent.appendChild(cont);
+        document.querySelectorAll('.match-join').forEach(b=>b.addEventListener('click',function(){
+            let m=matches[+this.dataset.i]; if(!curUser) return alert('Войди в аккаунт!');
+            if(!m.players) m.players=[]; if(!m.players.includes(curUser.nick)){ m.players.push(curUser.nick); localStorage.setItem('m',JSON.stringify(matches)); }
+            alert(`Ты подключился к матчу "${m.name}"!\nУчастники: ${m.players.join(', ')}`);
+        }));
+    }
+    document.querySelectorAll('[data-match]').forEach(s=>s.addEventListener('click',function(){ showMatch(this.dataset.match); }));
+    document.addEventListener('click',e=>{ if(e.target.id==='createMatchBtn'){
+        let name=document.getElementById('matchName')?.value.trim(), mode=document.getElementById('matchMode')?.value, date=document.getElementById('matchDate')?.value;
+        if(!name||!date) return alert('Заполни все поля');
+        matches.push({name,mode,date,players:curUser?[curUser.nick]:[]}); localStorage.setItem('m',JSON.stringify(matches));
+        showMatch('find');
+    }});
+
+    // Тема светлая/тёмная (заглушка, можно расширить)
+    let isDark=true;
+    document.getElementById('themeToggleBtn').addEventListener('click',()=>{
+        isDark=!isDark; document.body.style.background=isDark?'#0a0d13':'#f0f2f5';
+    });
+
+    // Авторизация
+    let authMode='login';
+    const authTitle=document.getElementById('authTitle'), authBtn=document.getElementById('authSubmit'), toggleTxt=document.getElementById('authToggleText'), toggleLnk=document.getElementById('authToggle'), authErr=document.getElementById('authErr');
+    document.getElementById('loginBtn').addEventListener('click',()=>{ authMode='login'; authTitle.textContent='ВХОД'; authBtn.textContent='Войти'; toggleTxt.textContent='Нет аккаунта?'; toggleLnk.textContent='Зарегистрироваться'; authPanel.classList.add('visible'); });
+    document.getElementById('regBtn').addEventListener('click',()=>{ authMode='register'; authTitle.textContent='РЕГИСТРАЦИЯ'; authBtn.textContent='Зарегистрироваться'; toggleTxt.textContent='Есть аккаунт?'; toggleLnk.textContent='Войти'; authPanel.classList.add('visible'); });
+    toggleLnk.addEventListener('click',e=>{ e.preventDefault(); authMode=authMode==='login'?'register':'login'; authTitle.textContent=authMode==='login'?'ВХОД':'РЕГИСТРАЦИЯ'; authBtn.textContent=authMode==='login'?'Войти':'Зарегистрироваться'; toggleTxt.textContent=authMode==='login'?'Нет аккаунта?':'Есть аккаунт?'; toggleLnk.textContent=authMode==='login'?'Зарегистрироваться':'Войти'; });
+    document.getElementById('togglePass').addEventListener('click',()=>{ let p=document.getElementById('authPass'); p.type=p.type==='password'?'text':'password'; });
+    document.getElementById('closeAuth').addEventListener('click',()=>authPanel.classList.remove('visible'));
+    authBtn.addEventListener('click',()=>{
+        let n=document.getElementById('authNick').value.trim(), p=document.getElementById('authPass').value;
+        if(!n||!p){ authErr.textContent='Заполни поля'; return; }
+        if(authMode==='register'){
+            if(users.some(u=>u.nick===n)){ authErr.textContent='Ник занят'; return; }
+            users.push({nick:n,pass:p,admin:false}); localStorage.setItem('u',JSON.stringify(users));
+            curUser={nick:n,admin:false}; localStorage.setItem('cur',JSON.stringify(curUser)); updateUI(); authPanel.classList.remove('visible');
+        } else {
+            let u=users.find(u=>u.nick===n&&u.pass===p);
+            if(!u){ authErr.textContent='Неверно'; return; }
+            curUser={nick:u.nick,admin:u.admin||false}; localStorage.setItem('cur',JSON.stringify(curUser)); updateUI(); authPanel.classList.remove('visible');
+        }
+    });
+    document.getElementById('logoutBtn').addEventListener('click',()=>{ curUser=null; localStorage.removeItem('cur'); updateUI(); });
+
+    document.getElementById('settingsBtn').addEventListener('click',()=>settingsPanel.classList.add('visible'));
+    document.getElementById('logoutSettings').addEventListener('click',()=>{ curUser=null; localStorage.removeItem('cur'); updateUI(); settingsPanel.classList.remove('visible'); });
+    document.getElementById('changeNick').addEventListener('click',()=>{
+        let nn=document.getElementById('newNick').value.trim(), er=document.getElementById('nickErr');
+        if(!nn){ er.textContent='Введи ник'; return; }
+        if(users.some(u=>u.nick===nn && u.nick!==curUser.nick)){ er.textContent='Занят'; return; }
+        let u=users.find(u=>u.nick===curUser.nick); u.nick=nn; localStorage.setItem('u',JSON.stringify(users));
+        curUser.nick=nn; localStorage.setItem('cur',JSON.stringify(curUser));
+        updateUI(); settingsPanel.classList.remove('visible');
+    });
+
+    document.getElementById('subContent').appendChild(document.getElementById('tpl-rules').cloneNode(true));
+    document.getElementById('subContent').firstChild.classList.remove('hidden');
+    updateUI(); showRating('top');
+})();
+</script>
+</body>
+</html>
