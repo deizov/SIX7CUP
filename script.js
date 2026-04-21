@@ -18,8 +18,11 @@
     let mainScreenShown = localStorage.getItem('mainScreen') !== 'false';
     let hasEntered = sessionStorage.getItem('hasEntered') === 'true';
 
-    // Инициализация
-    applyTheme(theme, isDark);
+    // Инициализация после загрузки DOM
+    document.addEventListener('DOMContentLoaded', () => {
+        applyTheme(theme, isDark);
+        initMainScreen();
+    });
 
     // ===== ГЛАВНЫЙ ЭКРАН (п.6) =====
     function initMainScreen() {
@@ -69,8 +72,6 @@
         showRating('top');
         renderChat();
     }
-
-    initMainScreen();
 
     // ===== НОВОСТИ =====
     const newsData = [
