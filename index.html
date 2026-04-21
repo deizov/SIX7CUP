@@ -1,0 +1,806 @@
+--- index.html (原始)
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DEADLOCK SIX7CUP</title>
+    <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&family=Cinzel:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            --accent: #c9a53b; --accent-light: #f5d37c; --accent-rgb: 201,165,59; --accent-emoji: "⚜️";
+            --bg: #0a0d13; --card-bg: #11161ee0; --text: #d4dce6; --text-secondary: #8a9bb5; --border: #2a3441;
+            font-family: 'Segoe UI', 'Arial', sans-serif; font-weight: 600;
+            min-height: 100vh; display: flex; flex-direction: column; color: var(--text);
+            background: var(--bg);
+            background-image: radial-gradient(circle at 20% 30%, rgba(201,165,59,0.08) 0%, transparent 30%), repeating-linear-gradient(45deg, rgba(20,26,36,0.4) 0px, rgba(20,26,36,0.4) 2px, transparent 2px, transparent 15px);
+        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0e131b; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 10px; }
+        * { scrollbar-width: thin; scrollbar-color: var(--accent) #0e131b; }
+
+        body.light-mode { --bg: #ffcccc; --card-bg: #ccffccd0; --text: #0000ff; --text-secondary: #ff00ff; --border: #00ff00; background: linear-gradient(45deg, red, orange, yellow, green, cyan, blue, violet); background-size: 400% 400%; animation: brokenRainbow 0.5s infinite; }
+        @keyframes brokenRainbow { 0%{background-position:0% 50%;} 50%{background-position:100% 50%;} 100%{background-position:0% 50%;} }
+        body.light-mode * { font-family: 'Comic Sans MS', cursive !important; }
+        body.theme-yellow { --accent:#c9a53b; --accent-light:#f5d37c; --accent-rgb:201,165,59; --accent-emoji:"⚜️"; }
+        body.theme-purple { --accent:#9b59b6; --accent-light:#d4a5e8; --accent-rgb:155,89,182; --accent-emoji:"🔮"; }
+        body.theme-green { --accent:#27ae60; --accent-light:#6fda9a; --accent-rgb:39,174,96; --accent-emoji:"🍃"; }
+        body.theme-red { --accent:#e74c3c; --accent-light:#f5a09a; --accent-rgb:231,76,60; --accent-emoji:"🔥"; }
+        body.theme-blue { --accent:#3498db; --accent-light:#85c1e9; --accent-rgb:52,152,219; --accent-emoji:"💎"; }
+
+        .landing { position:fixed; inset:0; background:#0a0d13; z-index:1000; display:flex; align-items:center; justify-content:center; }
+        .landing.hidden { opacity:0; pointer-events:none; }
+        .seal-btn { background:0; border:4px solid var(--accent); color:var(--accent-light); font-size:3rem; font-weight:900; padding:30px 60px; border-radius:100px; cursor:pointer; animation:pulse 2s infinite; }
+        .seal-btn.shake { animation:shake 0.25s ease, pulse 2s infinite; }
+        .shake-hard { animation:shakeHard 0.06s infinite !important; }
+        @keyframes pulse { 0%,100%{box-shadow:0 0 40px rgba(var(--accent-rgb),0.5);} 50%{box-shadow:0 0 70px var(--accent);} }
+        @keyframes shake { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-12px) rotate(-2deg);} 75%{transform:translateX(12px) rotate(2deg);} }
+        @keyframes shakeHard { 0%,100%{transform:translate(0,0);} 20%{transform:translate(-15px,5px);} 40%{transform:translate(15px,-5px);} 60%{transform:translate(-10px,10px);} 80%{transform:translate(10px,-10px);} }
+        .click-counter { position:absolute; bottom:50px; color:var(--accent); opacity:0.15; }
+
+        .overlay { position:fixed; inset:0; background:#0a0d13e0; z-index:2000; display:none; align-items:center; justify-content:center; backdrop-filter:blur(5px); }
+        .overlay.visible { display:flex; }
+        .overlay-msg { font-size:4rem; font-weight:900; color:var(--accent-light); text-shadow:0 0 50px #f44; animation:fadeScale 1s ease forwards; }
+        @keyframes fadeScale { 0%{opacity:0;transform:scale(0.7);} 20%{opacity:1;transform:scale(1);} 80%{opacity:1;} 100%{opacity:0;transform:scale(1.2);} }
+
+        .app { display:flex; width:100%; max-width:1600px; margin:20px auto; gap:20px; opacity:0; flex:1; }
+        .app.visible { opacity:1; }
+
+        .sidebar { width:100px; background:var(--card-bg); backdrop-filter:blur(10px); border-radius:30px; padding:30px 0; display:flex; flex-direction:column; align-items:center; gap:30px; border:1px solid var(--accent); }
+        .sidebar-btn { width:70px; height:70px; background:#1a232e; border:3px solid var(--accent); border-radius:20px; display:flex; align-items:center; justify-content:center; font-size:2rem; cursor:pointer; color:var(--accent-light); position:relative; }
+        .sidebar-btn:hover, .sidebar-btn.active { background:var(--accent); color:#0a0d13; }
+        .sidebar-btn:hover::after { content:attr(data-tooltip); position:fixed; background:#1a232e; padding:8px 15px; border-radius:10px; font-size:0.9rem; white-space:nowrap; border:1px solid var(--accent); color:var(--accent-light); z-index:9999; transform:translateX(10px); }
+
+        .main { flex:1; display:flex; flex-direction:column; gap:20px; }
+        .header { background:var(--card-bg); backdrop-filter:blur(10px); border-radius:30px; padding:20px 30px; border:1px solid var(--accent); display:flex; align-items:center; justify-content:space-between; }
+        h1 { font-size:2.5rem; color:var(--accent-light); text-shadow:0 0 20px var(--accent); }
+        .medieval { font-family: 'MedievalSharp', 'Cinzel', cursive; font-size: 1.8rem; color: var(--accent-light); letter-spacing: 2px; }
+        .auth-btn { background:0; border:1px solid var(--accent); color:var(--accent); padding:8px 16px; border-radius:30px; cursor:pointer; }
+        .auth-btn:hover { background:var(--accent); color:#0a0d13; }
+        .user-nick { font-family:'Cinzel', serif; color:var(--accent-light); cursor:pointer; }
+        .user-nick:hover { text-decoration:underline; }
+        .soul-display { background: linear-gradient(135deg, #2980b9, #1a5276); color: #e0f7fa; padding:5px 12px; border-radius:30px; font-weight:bold; cursor:help; box-shadow: 0 0 12px #3498db; display:flex; align-items:center; gap:5px; border:1px solid #3498db; }
+
+        .content { background:var(--card-bg); backdrop-filter:blur(10px); border-radius:30px; padding:30px; border:1px solid var(--accent); flex:1; }
+        .sub-tabs { display:flex; gap:15px; margin-bottom:25px; flex-wrap:wrap; }
+        .sub-tab { background:#1a232e; border:2px solid var(--accent); color:var(--accent-light); padding:10px 20px; border-radius:40px; cursor:pointer; }
+        .sub-tab:hover, .sub-tab.active { background:var(--accent); color:#0a0d13; }
+
+        .footer { background:var(--card-bg); backdrop-filter:blur(10px); border-radius:30px; padding:20px 30px; border:1px solid var(--accent); display:flex; justify-content:space-between; align-items:center; margin-top:auto; }
+        .quotes { flex:1; display:flex; justify-content:center; gap:30px; font-style:italic; color:var(--text-secondary); margin-right:20px; }
+        .signature { color:var(--accent); opacity:0.7; white-space:nowrap; }
+
+        /* Профиль */
+        .profile-container { display:flex; gap:30px; }
+        .profile-left { width:250px; text-align:center; }
+        .profile-avatar { width:150px; height:150px; border-radius:50%; border:3px solid var(--accent); object-fit:cover; background:#1a232e; cursor:pointer; margin-bottom:15px; }
+        .profile-nick { font-family:'Cinzel', serif; font-size:1.8rem; color:var(--accent-light); margin-bottom:10px; }
+        .profile-souls { color: var(--text-secondary); margin-bottom:20px; }
+        .profile-right { flex:1; }
+        .achievements { background:#1a232e; padding:20px; border-radius:20px; margin-bottom:20px; }
+        .achievements h3 { color:var(--accent-light); margin-bottom:15px; }
+        .ach-badge { display:inline-block; background:var(--accent); color:#0a0d13; padding:8px 15px; border-radius:30px; margin:5px; font-size:0.9rem; }
+        .profile-wall { background:#1a232e; padding:20px; border-radius:20px; }
+        .wall-post { background:#0e131b; padding:15px; border-radius:12px; margin-bottom:10px; }
+        .wall-post img { max-width:100%; border-radius:12px; margin-top:10px; }
+        .wall-input { display:flex; gap:10px; margin-top:15px; }
+        .wall-input input { flex:1; padding:12px; background:#0a0d13; border:1px solid var(--border); border-radius:30px; color:var(--text); }
+
+        .rating-table { width:100%; border-collapse:collapse; }
+        .rating-table th { background:#1a232e; padding:12px; color:var(--accent-light); text-align:left; }
+        .rating-table td { padding:10px; border-bottom:1px solid var(--border); }
+        .rank-badge { padding:4px 12px; border-radius:20px; font-weight:bold; font-size:0.85rem; }
+        .cursed { background:linear-gradient(135deg,#8B0000,#4a0000); color:#fcc; }
+        .eternus { background:linear-gradient(135deg,#00bcd4,#006064); color:#e0f7fa; }
+        .ascendant { background:linear-gradient(135deg,#ffd700,#b8860b); color:#000; }
+        .phantom { background:linear-gradient(135deg,#c0c0c0,#808080); color:#000; }
+        .oracle { background:linear-gradient(135deg,#ff8c00,#cc7000); color:#fff; }
+        .archon { background:linear-gradient(135deg,#9b59b6,#6c3483); color:#fff; }
+        .emissary { background:linear-gradient(135deg,#e74c3c,#a93226); color:#fff; }
+        .ritualist { background:linear-gradient(135deg,#f39c12,#d35400); color:#fff; }
+        .arcanist { background:linear-gradient(135deg,#2ecc71,#1e8449); color:#fff; }
+        .alchemist { background:linear-gradient(135deg,#5dade2,#2e86c1); color:#fff; }
+        .seeker { background:linear-gradient(135deg,#c0392b,#922b21); color:#fcc; }
+        .initiate { background:linear-gradient(135deg,#d4a017,#b8860b); color:#000; }
+
+        .chat-container { position:fixed; bottom:20px; right:20px; width:300px; background:var(--card-bg); backdrop-filter:blur(10px); border-radius:20px; border:2px solid var(--accent); z-index:500; overflow:hidden; transition:0.3s; }
+        .chat-container.expanded { width:400px; height:500px; }
+        .chat-header { background:#1a232e; padding:12px 15px; color:var(--accent-light); font-weight:bold; display:flex; justify-content:space-between; cursor:pointer; }
+        .chat-messages { height:250px; overflow-y:auto; padding:15px; display:flex; flex-direction:column; gap:8px; }
+        .expanded .chat-messages { height:350px; }
+        .chat-message { background:#0e131b; padding:8px 12px; border-radius:12px; }
+        .chat-message img { max-width:200px; border-radius:12px; margin-top:5px; cursor:pointer; }
+        .chat-minimized .chat-messages, .chat-minimized .chat-input-area { display:none; }
+        .expand-btn { background:0; border:0; color:var(--accent); font-size:1.2rem; cursor:pointer; margin-right:10px; }
+
+        .news-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:20px; max-height:600px; overflow-y:auto; padding-right:10px; }
+        .news-card { background:#1a232e; border-radius:16px; border:1px solid var(--border); overflow:hidden; }
+        .news-img { width:100%; height:150px; background: linear-gradient(135deg, #1a232e, #2a3441); display:flex; align-items:center; justify-content:center; color: var(--accent-light); font-size: 3rem; }
+        .news-content { padding:15px; }
+        .news-card a { color:var(--accent-light); text-decoration:none; font-size:1.1rem; font-weight:bold; display:block; margin-bottom:8px; }
+        .news-card a:hover { text-decoration:underline; }
+        .news-date { color:var(--text-secondary); font-size:0.85rem; }
+
+        .game-card { background:#1a232e; padding:20px; border-radius:16px; text-align:center; }
+        .game-btn { background:var(--accent); border:0; padding:12px 25px; border-radius:30px; font-weight:bold; margin:5px; cursor:pointer; }
+        .dice-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin:15px 0; }
+        .dice-btn { background:#0e131b; border:2px solid var(--border); padding:15px; border-radius:12px; font-size:1rem; cursor:pointer; }
+        .dice-btn:hover { border-color:var(--accent); }
+
+        .hidden { display:none !important; }
+        .theme-dot { width:35px; height:35px; border-radius:50%; cursor:pointer; border:2px solid transparent; }
+        .theme-dot.active { border-color:#fff; }
+
+        .fullscreen-img { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); max-width:80vw; max-height:80vh; z-index:3000; border-radius:16px; border:3px solid var(--accent); cursor:pointer; }
+        .img-backdrop { position:fixed; inset:0; background:#000c; z-index:2999; cursor:pointer; }
+    </style>
+</head>
+<body class="theme-yellow">
+
+<div class="landing" id="landing">
+    <button class="seal-btn" id="sealBtn">СОРВАТЬ ПЕЧАТЬ</button>
+    <div class="click-counter" id="counter">1 / 3</div>
+</div>
+
+<div class="overlay" id="overlay"><div class="overlay-msg" id="overlayMsg"></div></div>
+
+<div class="app" id="app">
+    <div class="sidebar">
+        <div class="sidebar-btn active" data-tab="news" data-tooltip="Новости">📰</div>
+        <div class="sidebar-btn" data-tab="rating" data-tooltip="Рейтинг">🏆</div>
+        <div class="sidebar-btn" data-tab="tournament" data-tooltip="Турнирная сетка">🏁</div>
+        <div class="sidebar-btn" data-tab="match" data-tooltip="Матчи">⚔️</div>
+        <div class="sidebar-btn" data-tab="info" data-tooltip="Информация">📜</div>
+        <div style="flex:1"></div>
+        <div class="sidebar-btn" data-tab="souls" data-tooltip="Души">💙</div>
+        <div class="sidebar-btn" id="settingsBtn" data-tooltip="Настройки">⚙️</div>
+    </div>
+
+    <div class="main">
+        <div class="header">
+            <div style="display:flex; align-items:center; gap:20px;">
+                <h1><span id="themeEmoji">⚜️</span> SIX7CUP</h1>
+                <span class="medieval">ArchMother ⚔️ Hidden King</span>
+            </div>
+            <div class="auth-area" id="authArea">
+                <div id="loggedOut"><button class="auth-btn" id="loginBtn">Войти</button><button class="auth-btn" id="regBtn">Регистрация</button></div>
+                <div id="loggedIn" class="user-info hidden" style="display:flex; align-items:center; gap:10px;">
+                    <span class="soul-display" id="soulDisplay" title="Количество твоих душ">💙 <span id="soulAmount">0</span></span>
+                    <span class="user-nick" id="userNick"></span>
+                    <span id="adminBadge" style="background:var(--accent);color:#0a0d13;padding:2px 8px;border-radius:20px;font-size:0.7rem;" class="hidden">ADMIN</span>
+                    <button class="auth-btn" id="logoutBtn">Выйти</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="content" id="contentArea">
+            <div id="tab-news"><div id="newsContent" class="news-grid"></div></div>
+            <div id="tab-rating" class="hidden"><div class="sub-tabs"><div class="sub-tab active" data-rating="top">🏅 Топ</div><div class="sub-tab" data-rating="system">📊 Система</div></div><div id="ratingContent"></div></div>
+            <div id="tab-tournament" class="hidden"><div style="text-align:center;padding:50px;">🏁 Турнирная сетка появится позже</div></div>
+            <div id="tab-match" class="hidden"><div class="sub-tabs"><div class="sub-tab active" data-match="find">🔍 Найти матч</div><div class="sub-tab" data-match="create">➕ Создать матч</div></div><div id="matchContent"></div></div>
+            <div id="tab-info" class="hidden"><div class="sub-tabs"><div class="sub-tab active" data-sub="banpick">Бан/Пик</div><div class="sub-tab" data-sub="cap">Кто такой кэп</div><div class="sub-tab" data-sub="pick">Пик игроков</div></div><div id="subContent"></div></div>
+            <div id="tab-souls" class="hidden"><div class="sub-tabs"><div class="sub-tab active" data-soul="daily">🎁 Ежедневные</div><div class="sub-tab" data-soul="bet">🎲 Ставки</div><div class="sub-tab" data-soul="blackjack">🃏 Блекджек</div><div class="sub-tab" data-soul="dice">🎲 Кубик</div></div><div id="soulContent"></div></div>
+            <div id="tab-profile" class="hidden"><div id="profileContent"></div></div>
+        </div>
+
+        <div class="footer">
+            <div class="quotes"><span>«6 героев. 7 грехов. 0 шансов»</span><span>«67 — не возраст, это диагноз»</span><span>«Мидбосс — мой единственный друг»</span></div>
+            <div class="signature" id="footerSignature">— <span id="signatureName">Barry Dylan</span></div>
+        </div>
+    </div>
+</div>
+
+<!-- ЧАТ -->
+<div class="chat-container chat-minimized" id="chatContainer">
+    <div class="chat-header" id="chatHeader"><span>💬 Чат</span><div><button class="expand-btn" id="expandChatBtn">⬛</button><span id="chatToggle">▼</span></div></div>
+    <div class="chat-messages" id="chatMessages"></div>
+    <div class="chat-input-area" style="display:flex; padding:10px; gap:8px;">
+        <input type="text" class="chat-input" id="chatInput" placeholder="Сообщение..." style="flex:1; padding:10px; background:#0a0d13; border:1px solid var(--border); border-radius:20px; color:var(--text);">
+        <input type="file" id="chatImageInput" accept="image/*" style="display:none;">
+        <button class="chat-send" id="attachImageBtn" style="background:var(--accent); border:0; padding:8px 15px; border-radius:20px; font-weight:bold;">🖼️</button>
+        <button class="chat-send" id="chatSend" style="background:var(--accent); border:0; padding:8px 15px; border-radius:20px; font-weight:bold;">➤</button>
+    </div>
+</div>
+
+<!-- ШАБЛОНЫ -->
+<div id="tpl-banpick" class="hidden"><table class="rating-table"><tr><th>Этап</th><th>Действие</th><th>Кто</th></tr><tr><td>1</td><td>Бан #1</td><td style="color:#64b5f6;">А</td></tr><tr><td>2</td><td>Бан #2</td><td style="color:#ff8a65;">Б</td></tr><tr><td>3</td><td>Пик #1</td><td style="color:#ff8a65;">Б</td></tr><tr><td>4</td><td>Пик #2-3</td><td style="color:#64b5f6;">А</td></tr><tr><td>5</td><td>Бан #3</td><td style="color:#64b5f6;">А</td></tr><tr><td>6</td><td>Бан #4</td><td style="color:#ff8a65;">Б</td></tr><tr><td>7</td><td>Пик #4-5</td><td style="color:#ff8a65;">Б</td></tr><tr><td>8</td><td>Пик #6-7</td><td style="color:#64b5f6;">А</td></tr><tr><td>9</td><td>Бан #5</td><td style="color:#64b5f6;">А</td></tr><tr><td>10</td><td>Бан #6</td><td style="color:#ff8a65;">Б</td></tr><tr><td>11</td><td>Пик #8-9</td><td style="color:#ff8a65;">Б</td></tr><tr><td>12</td><td>Пик #10-11</td><td style="color:#64b5f6;">А</td></tr><tr><td>13</td><td>Пик #12</td><td style="color:#ff8a65;">Б</td></tr></table></div>
+
+<div id="tpl-cap" class="hidden"><div style="background:#1a232e;padding:25px;border-radius:16px;"><p style="margin-bottom:15px;"><span style="color:var(--accent-light);font-weight:bold;">Капитан (кэп)</span> — лидер команды, который принимает финальные решения во время драфта и представляет интересы команды.</p><div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;"><div style="background:#11161e;padding:20px;border-radius:12px;"><div style="color:#64b5f6;font-weight:bold;margin-bottom:10px;">🗣️ Обязанности кэпа:</div><ul style="line-height:1.8;"><li>Кидает монетку за команду</li><li>Называет баны от лица команды</li><li>Называет пики от лица команды</li><li>Следит за таймером драфта</li></ul></div><div style="background:#11161e;padding:20px;border-radius:12px;"><div style="color:#ff8a65;font-weight:bold;margin-bottom:10px;">👥 Остальные игроки:</div><ul style="line-height:1.8;"><li>Предлагают варианты банов/пиков</li><li>Советуются в голосовом чате</li><li>Доверяют финальное слово кэпу</li><li>Готовятся играть на любом герое</li></ul></div></div><div style="margin-top:20px;background:#0a0d13;padding:15px;border-radius:8px;text-align:center;"><span style="color:var(--accent-light);">💡 Совет:</span> Выберите кэпа до начала турнира. Если не можете договориться — киньте монетку внутри команды.</div></div></div>
+
+<div id="tpl-pick" class="hidden"><div style="background:#1a232e;padding:25px;border-radius:16px;"><p style="margin-bottom:15px;">Система пика <span style="color:var(--accent-light);">игроков</span> (не героев!) определяет, в каком порядке капитаны выбирают людей в свои команды.</p><div style="display:flex;justify-content:center;gap:5px;margin:20px 0;"><span style="background:#2a4a6b;padding:15px 20px;border-radius:12px;color:#90caf9;">1</span><span style="font-size:2rem;color:var(--accent);">→</span><span style="background:#6b2a2a;padding:15px 20px;border-radius:12px;color:#ffab91;">2</span><span style="font-size:2rem;color:var(--accent);">→</span><span style="background:#2a4a6b;padding:15px 20px;border-radius:12px;color:#90caf9;">1</span><span style="font-size:2rem;color:var(--accent);">→</span><span style="background:#6b2a2a;padding:15px 20px;border-radius:12px;color:#ffab91;">2</span><span style="font-size:2rem;color:var(--accent);">→</span><span style="background:#2a4a6b;padding:15px 20px;border-radius:12px;color:#90caf9;">1</span><span style="font-size:2rem;color:var(--accent);">→</span><span style="background:#6b2a2a;padding:15px 20px;border-radius:12px;color:#ffab91;">2</span><span style="font-size:2rem;color:var(--accent);">→</span><span style="background:#2a4a6b;padding:15px 20px;border-radius:12px;color:#90caf9;">1</span><span style="font-size:2rem;color:var(--accent);">→</span><span style="background:#6b2a2a;padding:15px 20px;border-radius:12px;color:#ffab91;">2</span><span style="font-size:2rem;color:var(--accent);">→</span><span style="background:#6b2a2a;padding:15px 20px;border-radius:12px;color:#ffab91;">2</span><span style="font-size:2rem;color:var(--accent);">→</span><span style="background:#2a4a6b;padding:15px 20px;border-radius:12px;color:#90caf9;">1</span></div><p style="text-align:center;margin-bottom:15px;"><span style="color:var(--accent-light);">1</span> — выбор капитана первой команды, <span style="color:var(--accent-light);">2</span> — выбор капитана второй команды.</p><p style="background:#0a0d13;padding:15px;border-radius:8px;">Первая команда получает преимущество первого выбора (может забрать самого сильного игрока), но вторая команда получает два выбора подряд в конце драфта, что позволяет забрать связку оставшихся игроков.</p></div></div>
+
+<div id="tpl-top" class="hidden"><table class="rating-table"><tr><th>Место</th><th>Игрок</th><th>Очки</th><th>Ранг</th></tr><tr><td>1</td><td>DanBrosCrut</td><td>18349</td><td><span class="rank-badge eternus">ETERNUS</span></td></tr><tr><td>2</td><td>Nair</td><td>14984</td><td><span class="rank-badge oracle">ORACLE</span></td></tr><tr><td>3</td><td>Barry Dylan</td><td>14025</td><td><span class="rank-badge oracle">ORACLE</span></td></tr><tr><td>4</td><td>kulttisurita</td><td>13952</td><td><span class="rank-badge oracle">ORACLE</span></td></tr><tr><td>5</td><td>Rafaelka_0</td><td>12626</td><td><span class="rank-badge archon">ARCHON</span></td></tr><tr><td>6</td><td>Syxarik</td><td>12004</td><td><span class="rank-badge archon">ARCHON</span></td></tr><tr><td>7</td><td>KjRj</td><td>8059</td><td><span class="rank-badge ritualist">RITUALIST</span></td></tr><tr><td>8</td><td>rb4ka</td><td>7669</td><td><span class="rank-badge arcanist">ARCANIST</span></td></tr><tr><td>9</td><td>shtefan_nein</td><td>7164</td><td><span class="rank-badge arcanist">ARCANIST</span></td></tr><tr><td>10</td><td>Matt</td><td>6917</td><td><span class="rank-badge alchemist">ALCHEMIST</span></td></tr><tr><td>11</td><td>allmutekotek</td><td>6415</td><td><span class="rank-badge alchemist">ALCHEMIST</span></td></tr></table></div>
+
+<div id="tpl-system" class="hidden"><div style="background:#1a232e;padding:20px;border-radius:16px;"><p>Рейтинг работает на основе статистики во многих матчах. Каждому параметру (KDA, урон, лечение, добивания) присваивается свой коэффициент полезности, по которому идёт подсчёт очков. Хилл саппортов и хилл кора имеют разные цифры и показатели.</p><h3 style="margin:20px 0;color:var(--accent-light);">📋 Таблица рангов</h3><table class="rating-table"><tr><th>Ранг</th><th>Очки</th></tr><tr><td><span class="rank-badge cursed">CURSED</span></td><td>20000</td></tr><tr><td><span class="rank-badge eternus">ETERNUS</span></td><td>18000</td></tr><tr><td><span class="rank-badge ascendant">ASCENDANT</span></td><td>17000</td></tr><tr><td><span class="rank-badge phantom">PHANTOM</span></td><td>15000</td></tr><tr><td><span class="rank-badge oracle">ORACLE</span></td><td>13000</td></tr><tr><td><span class="rank-badge archon">ARCHON</span></td><td>11000</td></tr><tr><td><span class="rank-badge emissary">EMISSARY</span></td><td>10000</td></tr><tr><td><span class="rank-badge ritualist">RITUALIST</span></td><td>8000</td></tr><tr><td><span class="rank-badge arcanist">ARCANIST</span></td><td>7000</td></tr><tr><td><span class="rank-badge alchemist">ALCHEMIST</span></td><td>5000</td></tr><tr><td><span class="rank-badge seeker">SEEKER</span></td><td>4000</td></tr><tr><td><span class="rank-badge initiate">INITIATE</span></td><td>2000</td></tr></table></div></div>
+
+<div id="tpl-find-match" class="hidden"><div id="matchesList"></div></div>
+<div id="tpl-create-match" class="hidden"><div style="background:#1a232e;padding:25px;border-radius:16px;"><h3>➕ Создать матч</h3><input type="text" id="matchName" placeholder="Название"><select id="matchMode"><option>6x6 обычная</option><option>4x4 уличная</option><option>2x2 уличная</option><option>3x3 уличная</option></select><input type="datetime-local" id="matchDate"><button id="createMatchBtn" style="width:100%;padding:14px;background:var(--accent);border:0;border-radius:12px;">Создать</button></div></div>
+
+<div id="authPanel" class="overlay"><div style="background:var(--card-bg);padding:30px;border-radius:30px;max-width:400px;width:100%;border:2px solid var(--accent);"><h2 id="authTitle">ВХОД</h2><input type="text" id="authNick" placeholder="Никнейм"><div style="position:relative;"><input type="password" id="authPass" placeholder="Пароль" style="padding-right:40px;"><button id="togglePass" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:0;border:0;color:var(--text-secondary);">👁️</button></div><button id="authSubmit" style="width:100%;padding:14px;margin-top:15px;background:var(--accent);border:0;border-radius:12px;">Войти</button><p style="margin-top:15px;"><span id="authToggleText">Нет аккаунта?</span> <a href="#" id="authToggle" style="color:var(--accent);">Зарегистрироваться</a></p><p id="authErr" style="color:#f66;"></p><button id="closeAuth" style="width:100%;padding:10px;margin-top:10px;background:0;border:1px solid var(--border);color:var(--text-secondary);border-radius:12px;">Закрыть</button></div></div>
+
+<div id="settingsPanel" class="overlay"><div style="background:var(--card-bg);padding:30px;border-radius:30px;max-width:400px;border:2px solid var(--accent);"><h2>⚙️ НАСТРОЙКИ</h2><h3>Тема</h3><div style="display:flex;gap:10px;margin:15px 0;"><button id="darkThemeBtn" style="flex:1;padding:12px;background:var(--accent);border:0;border-radius:12px;">🌙 Тёмная</button><button id="lightThemeBtn" style="flex:1;padding:12px;background:#1a232e;border:1px solid var(--accent);color:var(--accent-light);border-radius:12px;">☀️ Светлая</button></div><h3>Цвет</h3><div style="display:flex;gap:10px;margin:15px 0;"><div class="theme-dot active" data-theme="yellow" style="background:#c9a53b;"></div><div class="theme-dot" data-theme="purple" style="background:#9b59b6;"></div><div class="theme-dot" data-theme="green" style="background:#27ae60;"></div><div class="theme-dot" data-theme="red" style="background:#e74c3c;"></div><div class="theme-dot" data-theme="blue" style="background:#3498db;"></div></div><button id="saveTheme" style="width:100%;padding:12px;background:var(--accent);border:0;border-radius:12px;">💾 Сохранить</button><h3 style="margin-top:20px;">Смена ника</h3><input type="text" id="newNick" placeholder="Новый ник"><button id="changeNick" style="width:100%;padding:12px;margin-top:10px;background:var(--accent);border:0;border-radius:12px;">Сменить</button><p id="nickErr" style="color:#f66;"></p>
+<button id="adminPanelBtn" style="width:100%;padding:12px;margin-top:10px;background:#6a0dad;color:#fff;border:0;border-radius:12px;" class="hidden">👑 Админ-панель</button>
+<button id="logoutSettings" style="width:100%;padding:12px;margin-top:10px;background:#6b2a2a;color:#ffab91;border:0;border-radius:12px;">🚪 Выйти</button><button id="closeSettings" style="width:100%;padding:10px;margin-top:10px;background:0;border:1px solid var(--border);color:var(--text-secondary);border-radius:12px;">Закрыть</button></div></div>
+
+<div id="adminPanel" class="overlay"><div style="background:var(--card-bg);padding:30px;border-radius:30px;max-width:600px;width:100%;border:2px solid var(--accent);"><h2>👑 Админ-панель</h2><div class="sub-tabs"><div class="sub-tab active" data-admin="users">Пользователи</div><div class="sub-tab" data-admin="souls">Выдать души</div><div class="sub-tab" data-admin="admins">Права</div><div class="sub-tab" data-admin="mutes">Мут</div></div><div id="adminContent" class="admin-panel"></div><button id="closeAdmin" style="width:100%;padding:10px;margin-top:20px;background:0;border:1px solid var(--border);color:var(--text-secondary);border-radius:12px;">Закрыть</button></div></div>
+
+<script>
+(function(){
+    let users = JSON.parse(localStorage.getItem('u')) || [];
+    let matches = JSON.parse(localStorage.getItem('m')) || [];
+    let mutedUsers = JSON.parse(localStorage.getItem('muted')) || [];
+    if(!users.some(u=>u.nick==='Barry Dylan')) users.push({nick:'Barry Dylan',pass:'locer228',admin:true,souls:1000,streak:0,lastClaim:null, avatar:'', wall:[]});
+    localStorage.setItem('u', JSON.stringify(users));
+    let curUser = JSON.parse(localStorage.getItem('cur')) || null;
+    let theme = localStorage.getItem('th') || 'yellow';
+    let isDark = localStorage.getItem('darkMode') !== 'false';
+    document.body.className = 'theme-'+theme + (isDark ? '' : ' light-mode');
+    document.getElementById('themeEmoji').textContent = {'yellow':'⚜️','purple':'🔮','green':'🍃','red':'🔥','blue':'💎'}[theme] || '⚜️';
+
+    const newsData = [
+        {title:"Quinn: «Киберспорт в Deadlock — говно»", url:"#", date:"14.04.2026", icon:"🎙️"},
+        {title:"Bebop Hookwars в Deadlock!", url:"#", date:"13.04.2026", icon:"🪝"},
+        {title:"Обновление от 11 апреля", url:"#", date:"12.04.2026", icon:"🛠️"},
+        {title:"Новый герой: Чеширский Кот", url:"#", date:"10.04.2026", icon:"🐱"},
+        {title:"Deadlock на EGX 2026", url:"#", date:"08.04.2026", icon:"🎮"},
+        {title:"Турнир Deadlock Pro League", url:"#", date:"05.04.2026", icon:"🏆"},
+        {title:"Гайд: Как играть на Paradox", url:"#", date:"03.04.2026", icon:"📖"},
+        {title:"Патч 1.2.3: Нерф Dynamo", url:"#", date:"01.04.2026", icon:"⚖️"}
+    ];
+    function renderNews(){ document.getElementById('newsContent').innerHTML = newsData.map(n=>`<div class="news-card"><div class="news-img">${n.icon}</div><div class="news-content"><a href="${n.url}" target="_blank">${n.title}</a><div class="news-date">${n.date}</div></div></div>`).join(''); }
+
+    function updateUI(){
+        if(curUser){
+            document.getElementById('loggedOut').classList.add('hidden');
+            document.getElementById('loggedIn').classList.remove('hidden');
+            document.getElementById('userNick').textContent=curUser.nick;
+            document.getElementById('adminBadge').classList.toggle('hidden',!curUser.admin);
+            document.getElementById('adminPanelBtn').classList.toggle('hidden',!curUser.admin);
+            let u = users.find(u=>u.nick===curUser.nick);
+            document.getElementById('soulAmount').textContent = u?.souls || 0;
+            document.getElementById('signatureName').textContent = curUser.nick;
+        } else {
+            document.getElementById('loggedOut').classList.remove('hidden');
+            document.getElementById('loggedIn').classList.add('hidden');
+            document.getElementById('signatureName').textContent = 'Barry Dylan';
+        }
+    }
+
+    // Профиль
+    function renderProfile(nick){
+        let u = users.find(u=>u.nick===nick);
+        if(!u) return;
+        let cont = document.getElementById('profileContent');
+        let achievements = [];
+        if(u.souls>=1000) achievements.push('💎 Богач');
+        if(u.streak>=7) achievements.push('🔥 Недельный стрик');
+        if(u.admin) achievements.push('👑 Админ');
+        if(!u.avatar) u.avatar = 'https://via.placeholder.com/150/1a232e/c9a53b?text='+u.nick[0];
+        let wall = u.wall || [];
+        let html = `<div class="profile-container">
+            <div class="profile-left">
+                <img src="${u.avatar}" class="profile-avatar" id="avatarImg" title="Нажми, чтобы загрузить аватар">
+                <input type="file" id="avatarUpload" accept="image/*" style="display:none;">
+                <div class="profile-nick">${u.nick}</div>
+                <div class="profile-souls">💙 ${u.souls} душ</div>
+            </div>
+            <div class="profile-right">
+                <div class="achievements"><h3>🏆 Достижения</h3>${achievements.length?achievements.map(a=>`<span class="ach-badge">${a}</span>`).join(''):'<span style="color:var(--text-secondary);">Пока нет достижений</span>'}</div>
+                <div class="profile-wall"><h3>📝 Стена</h3><div id="wallPosts">${wall.slice(-5).reverse().map(p=>`<div class="wall-post"><p>${p.text}</p>${p.img?`<img src="${p.img}">`:''}</div>`).join('')}</div>`;
+        if(curUser && curUser.nick===u.nick){
+            html += `<div class="wall-input"><input type="text" id="wallText" placeholder="Что нового?"><input type="file" id="wallImageInput" accept="image/*" style="display:none;"><button class="game-btn" id="wallImageBtn">🖼️</button><button class="game-btn" id="wallPostBtn">Опубликовать</button></div>`;
+        }
+        html += `</div></div></div>`;
+        cont.innerHTML = html;
+        if(curUser && curUser.nick===u.nick){
+            document.getElementById('avatarImg').addEventListener('click', ()=>document.getElementById('avatarUpload').click());
+            document.getElementById('avatarUpload').addEventListener('change', function(e){
+                let file = e.target.files[0]; if(!file) return;
+                let reader = new FileReader();
+                reader.onload = ev=>{ u.avatar = ev.target.result; localStorage.setItem('u', JSON.stringify(users)); renderProfile(u.nick); };
+                reader.readAsDataURL(file);
+            });
+            document.getElementById('wallImageBtn').addEventListener('click', ()=>document.getElementById('wallImageInput').click());
+            document.getElementById('wallPostBtn').addEventListener('click', ()=>{
+                let text = document.getElementById('wallText').value.trim();
+                let img = document.getElementById('wallImageInput').files[0];
+                if(!text && !img) return;
+                let post = {text, img:''};
+                if(img){
+                    let reader = new FileReader();
+                    reader.onload = ev=>{ post.img = ev.target.result; u.wall.push(post); localStorage.setItem('u', JSON.stringify(users)); renderProfile(u.nick); };
+                    reader.readAsDataURL(img);
+                } else { u.wall.push(post); localStorage.setItem('u', JSON.stringify(users)); renderProfile(u.nick); }
+            });
+        }
+    }
+
+    // Блекджек
+    let bjGame = { deck:[], player:[], dealer:[], gameOver:true };
+    function initBJ(){ bjGame = { deck:[], player:[], dealer:[], gameOver:false }; for(let i=0; i<4; i++) for(let j=2; j<=11; j++) bjGame.deck.push(j); bjGame.deck = bjGame.deck.sort(()=>Math.random()-0.5); bjGame.player.push(bjGame.deck.pop(), bjGame.deck.pop()); bjGame.dealer.push(bjGame.deck.pop(), bjGame.deck.pop()); }
+    function bjSum(cards){ return cards.reduce((a,b)=>a+b,0); }
+    function bjRender(cont, u){
+        let pSum = bjSum(bjGame.player), dSum = bjSum(bjGame.dealer);
+        let html = `<div class="game-card"><h3>🃏 Блекджек</h3><p>Баланс: 💙 ${u.souls}</p>`;
+        if(bjGame.gameOver){
+            html += `<p>Дилер: ${dSum} | Ты: ${pSum}</p>`;
+            if(pSum>21) html += `<p style="color:#e74c3c;">Перебор! Поражение.</p>`;
+            else if(dSum>21) html += `<p style="color:#2ecc71;">Дилер перебрал! Победа +${u.bjBet*2} 💙</p>`;
+            else if(pSum>dSum) html += `<p style="color:#2ecc71;">Победа! +${u.bjBet*2} 💙</p>`;
+            else if(pSum<dSum) html += `<p style="color:#e74c3c;">Поражение. -${u.bjBet} 💙</p>`;
+            else html += `<p>Ничья. Ставка возвращена.</p>`;
+            html += `<input type="number" id="bjBet" placeholder="Ставка" value="10" style="width:150px; margin:10px;"><br><button class="game-btn" id="bjStart">Начать игру</button>`;
+        } else {
+            html += `<p>Дилер: ${bjGame.dealer[0]} + ?</p><p>Ты: ${pSum}</p><button class="game-btn" id="bjHit">Ещё</button> <button class="game-btn" id="bjStand">Хватит</button>`;
+        }
+        html += `</div>`; cont.innerHTML = html;
+        if(bjGame.gameOver){
+            document.getElementById('bjStart')?.addEventListener('click', ()=>{
+                let bet = parseInt(document.getElementById('bjBet')?.value);
+                if(!bet || bet<=0 || bet>u.souls) return alert('Неверная ставка');
+                u.bjBet = bet; u.souls -= bet; initBJ(); bjRender(cont, u);
+            });
+        } else {
+            document.getElementById('bjHit')?.addEventListener('click', ()=>{ bjGame.player.push(bjGame.deck.pop()); if(bjSum(bjGame.player)>21){ bjGame.gameOver=true; u.souls -= u.bjBet; } bjRender(cont, u); });
+            document.getElementById('bjStand')?.addEventListener('click', ()=>{ while(bjSum(bjGame.dealer)<17) bjGame.dealer.push(bjGame.deck.pop()); bjGame.gameOver=true; let p=bjSum(bjGame.player), d=bjSum(bjGame.dealer); if(d>21 || p>d) u.souls += u.bjBet*2; else if(p===d) u.souls += u.bjBet; localStorage.setItem('u', JSON.stringify(users)); updateUI(); bjRender(cont, u); });
+        }
+    }
+
+    function renderSoul(tab){
+        let cont = document.getElementById('soulContent');
+        if(!curUser){ cont.innerHTML = '<div class="game-card">Войди в аккаунт!</div>'; return; }
+        let u = users.find(u=>u.nick===curUser.nick);
+        if(tab==='daily'){
+            let today = new Date().toDateString(), yesterday = new Date(Date.now()-86400000).toDateString();
+            let canClaim = u.lastClaim !== today;
+            if(u.lastClaim === yesterday) {} else if(u.lastClaim !== today && u.lastClaim) u.streak = 0;
+            let rewards = [50,75,100,150,200,300,500], next = rewards[Math.min(u.streak,6)];
+            let html = `<div class="game-card"><h3>🎁 Ежедневный бонус</h3><p>Баланс: 💙 ${u.souls}</p><div style="display:flex; justify-content:center; gap:10px; margin:20px 0;">`;
+            for(let i=0;i<7;i++) html += `<div style="width:40px;height:40px;border-radius:50%;background:${i<u.streak?'#27ae60':(i===u.streak&&canClaim?'var(--accent)':'#0a0d13')};border:2px solid var(--border);display:flex;align-items:center;justify-content:center;">${i+1}</div>`;
+            html += `</div><p>Серия: ${u.streak} дн. | +${next} 💙</p><button class="game-btn" id="claimDailyBtn" ${canClaim?'':'disabled'}>${canClaim?'Забрать':'Получено'}</button></div>`;
+            cont.innerHTML = html;
+            if(canClaim) document.getElementById('claimDailyBtn').addEventListener('click', ()=>{ u.streak = (u.lastClaim === yesterday) ? u.streak+1 : 1; u.souls += rewards[Math.min(u.streak-1,6)]; u.lastClaim = today; localStorage.setItem('u', JSON.stringify(users)); updateUI(); renderSoul('daily'); });
+        } else if(tab==='bet'){ cont.innerHTML = '<div class="game-card"><h3>🎲 Ставки на матчи</h3><p>Скоро...</p></div>'; }
+        else if(tab==='blackjack'){ bjRender(cont, u); }
+        else if(tab==='dice'){
+            cont.innerHTML = `<div class="game-card"><h3>🎲 Бросок кубика</h3><p>Баланс: 💙 ${u.souls}</p><input type="number" id="diceBet" placeholder="Ставка" style="width:150px; margin:10px;"><div class="dice-grid"><div class="dice-btn" data-bet="1-3">1-3 (x2)</div><div class="dice-btn" data-bet="4-6">4-6 (x2)</div><div class="dice-btn" data-bet="even">Чёт (x2)</div><div class="dice-btn" data-bet="odd">Нечёт (x2)</div></div><div style="display:grid; grid-template-columns:repeat(3,1fr); gap:5px; margin-top:10px;">${[1,2,3,4,5,6].map(n=>`<div class="dice-btn" data-bet="${n}">${n} (x6)</div>`).join('')}</div><div id="diceResult"></div></div>`;
+            document.querySelectorAll('.dice-btn').forEach(b=>b.addEventListener('click',()=>{
+                let bet = parseInt(document.getElementById('diceBet')?.value); if(!bet || bet<=0 || bet>u.souls) return alert('Неверная ставка');
+                let type = b.dataset.bet, roll = Math.floor(Math.random()*6)+1, win = false;
+                if(type==='1-3' && roll<=3) win=true; else if(type==='4-6' && roll>=4) win=true;
+                else if(type==='even' && roll%2===0) win=true; else if(type==='odd' && roll%2===1) win=true;
+                else if(parseInt(type)===roll) win=true;
+                let mult = type.length>2 ? 2 : 6;
+                if(win){ u.souls += bet * (mult-1); document.getElementById('diceResult').innerHTML = `✅ Выпало ${roll}! +${bet*(mult-1)} 💙`; }
+                else { u.souls -= bet; document.getElementById('diceResult').innerHTML = `❌ Выпало ${roll}. -${bet} 💙`; }
+                localStorage.setItem('u', JSON.stringify(users)); updateUI(); renderSoul('dice');
+            }));
+        }
+    }
+
+    let chatMessages = JSON.parse(localStorage.getItem('chat')) || [];
+    function renderChat(){
+        let cont = document.getElementById('chatMessages');
+        cont.innerHTML = chatMessages.slice(-50).map(m=>`<div class="chat-message"><span class="nick" data-nick="${m.nick}">${m.nick}:</span> ${m.text}${m.img?`<br><img src="${m.img}" class="chat-img">`:''}</div>`).join('');
+        document.querySelectorAll('.chat-img').forEach(img=>img.addEventListener('click',function(){
+            let div = document.createElement('div'); div.className = 'img-backdrop';
+            let imgEl = document.createElement('img'); imgEl.src = this.src; imgEl.className = 'fullscreen-img';
+            div.onclick = ()=>{ div.remove(); imgEl.remove(); }; imgEl.onclick = ()=>{ div.remove(); imgEl.remove(); }; document.body.append(div, imgEl);
+        }));
+    }
+    function saveChat(){ localStorage.setItem('chat', JSON.stringify(chatMessages.slice(-100))); }
+    document.getElementById('chatHeader').addEventListener('click',(e)=>{ if(!e.target.closest('button')){ let c=document.getElementById('chatContainer'); c.classList.toggle('chat-minimized'); if(!c.classList.contains('chat-minimized')) c.classList.remove('expanded'); }});
+    document.getElementById('chatSend').addEventListener('click',()=>{ let inp=document.getElementById('chatInput'); if(!inp.value.trim()||!curUser) return; if(mutedUsers.includes(curUser.nick)){ alert('Ты в муте!'); return; } chatMessages.push({nick:curUser.nick, text:inp.value.trim()}); renderChat(); saveChat(); inp.value=''; });
+    document.getElementById('chatInput').addEventListener('keypress',e=>{ if(e.key==='Enter') document.getElementById('chatSend').click(); });
+    document.getElementById('expandChatBtn').addEventListener('click',()=>{ let c=document.getElementById('chatContainer'); c.classList.toggle('expanded'); if(c.classList.contains('chat-minimized')) c.classList.remove('chat-minimized'); });
+    document.getElementById('attachImageBtn').addEventListener('click',()=>document.getElementById('chatImageInput').click());
+    document.getElementById('chatImageInput').addEventListener('change',function(e){ let file = e.target.files[0]; if(!file||!curUser) return; let reader = new FileReader(); reader.onload = ev=>{ chatMessages.push({nick:curUser.nick, text:'', img:ev.target.result}); renderChat(); saveChat(); }; reader.readAsDataURL(file); });
+
+    document.getElementById('userNick').addEventListener('click',()=>{ if(!curUser) return; let u = users.find(u=>u.nick===curUser.nick); renderProfile(u.nick); Object.values(tabs).forEach(t=>t.classList.add('hidden')); tabs.profile.classList.remove('hidden'); document.querySelectorAll('.sidebar-btn').forEach(b=>b.classList.remove('active')); });
+
+    // Лендинг
+    let clicks=0, audioCtx=null;
+    function playSound(){ try{
+        if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)(); if(audioCtx.state==='suspended') audioCtx.resume();
+        let o1=audioCtx.createOscillator(), o2=audioCtx.createOscillator(), g=audioCtx.createGain(); o1.connect(g); o2.connect(g); g.connect(audioCtx.destination);
+        o1.type='sawtooth'; o2.type='triangle'; o1.frequency.setValueAtTime(100,audioCtx.currentTime); o1.frequency.exponentialRampToValueAtTime(40,audioCtx.currentTime+0.4);
+        o2.frequency.setValueAtTime(150,audioCtx.currentTime); o2.frequency.exponentialRampToValueAtTime(60,audioCtx.currentTime+0.4);
+        g.gain.setValueAtTime(0.2,audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.01,audioCtx.currentTime+0.6); o1.start(); o2.start(); o1.stop(audioCtx.currentTime+0.6); o2.stop(audioCtx.currentTime+0.6);
+    }catch(e){} }
+    document.getElementById('sealBtn').addEventListener('click',()=>{
+        clicks++; document.getElementById('counter').textContent=clicks+' / 3'; document.getElementById('sealBtn').classList.add('shake'); setTimeout(()=>document.getElementById('sealBtn').classList.remove('shake'),250);
+        if(clicks>=3){
+            document.getElementById('landing').classList.add('hidden'); document.getElementById('overlay').classList.add('visible'); document.getElementById('overlayMsg').textContent='ПЕЧАТЬ СОРВАНА';
+            setTimeout(()=>{ document.getElementById('overlay').classList.remove('visible');
+                setTimeout(()=>{ document.getElementById('overlay').classList.add('visible'); document.getElementById('overlayMsg').textContent='ПОКРОВИТЕЛИ НЕГОДУЮТ'; document.body.classList.add('shake-hard'); playSound();
+                    setTimeout(()=>{ document.body.classList.remove('shake-hard'); document.getElementById('overlay').classList.remove('visible'); document.getElementById('app').classList.add('visible'); if(!curUser) document.getElementById('authPanel').classList.add('visible'); updateUI(); renderNews(); },2000);
+                },100);
+            },1000);
+        }
+    });
+
+    function setTheme(t,save){ document.body.className = 'theme-'+t + (isDark ? '' : ' light-mode'); document.querySelectorAll('.theme-dot').forEach(d=>d.classList.remove('active')); document.querySelector(`.theme-dot[data-theme="${t}"]`).classList.add('active'); document.getElementById('themeEmoji').textContent = {'yellow':'⚜️','purple':'🔮','green':'🍃','red':'🔥','blue':'💎'}[t] || '⚜️'; if(save) localStorage.setItem('th',t); }
+    document.querySelectorAll('.theme-dot').forEach(d=>d.addEventListener('click',()=>setTheme(d.dataset.theme,true)));
+    document.getElementById('saveTheme').addEventListener('click',()=>{ setTheme(theme,true); settingsPanel.classList.remove('visible'); });
+    document.getElementById('darkThemeBtn').addEventListener('click',()=>{ isDark=true; localStorage.setItem('darkMode','true'); setTheme(theme,true); });
+    document.getElementById('lightThemeBtn').addEventListener('click',()=>{ isDark=false; localStorage.setItem('darkMode','false'); setTheme(theme,true); });
+
+    const tabs={news:document.getElementById('tab-news'),rating:document.getElementById('tab-rating'),tournament:document.getElementById('tab-tournament'),match:document.getElementById('tab-match'),info:document.getElementById('tab-info'),souls:document.getElementById('tab-souls'),profile:document.getElementById('tab-profile')};
+    document.querySelectorAll('.sidebar-btn[data-tab]').forEach(b=>b.addEventListener('click',function(){
+        let tab=this.dataset.tab; Object.values(tabs).forEach(t=>t.classList.add('hidden')); tabs[tab].classList.remove('hidden');
+        document.querySelectorAll('.sidebar-btn').forEach(b=>b.classList.remove('active')); this.classList.add('active');
+        if(tab==='rating') showRating('top'); if(tab==='match') showMatch('find'); if(tab==='souls') renderSoul('daily');
+    }));
+
+    const subContent=document.getElementById('subContent');
+    document.querySelectorAll('[data-sub]').forEach(s=>s.addEventListener('click',function(){
+        let sub=this.dataset.sub; document.querySelectorAll('[data-sub]').forEach(s=>s.classList.remove('active')); this.classList.add('active');
+        let clone=document.getElementById('tpl-'+sub).cloneNode(true); clone.classList.remove('hidden'); subContent.innerHTML=''; subContent.appendChild(clone);
+    }));
+
+    const ratingContent=document.getElementById('ratingContent');
+    function showRating(t){ document.querySelectorAll('[data-rating]').forEach(s=>s.classList.remove('active')); document.querySelector(`[data-rating="${t}"]`).classList.add('active'); let clone=document.getElementById('tpl-'+t).cloneNode(true); clone.classList.remove('hidden'); ratingContent.innerHTML=''; ratingContent.appendChild(clone); }
+    document.querySelectorAll('[data-rating]').forEach(s=>s.addEventListener('click',function(){ showRating(this.dataset.rating); }));
+
+    const matchContent=document.getElementById('matchContent');
+    function showMatch(t){ document.querySelectorAll('[data-match]').forEach(s=>s.classList.remove('active')); document.querySelector(`[data-match="${t}"]`).classList.add('active'); if(t==='find'){ renderMatches(); } else { let clone=document.getElementById('tpl-create-match').cloneNode(true); clone.classList.remove('hidden'); matchContent.innerHTML=''; matchContent.appendChild(clone); } }
+    function renderMatches(){
+        let cont=document.createElement('div'); if(!matches.length) cont.innerHTML='<div>Нет матчей</div>';
+        else matches.forEach((m,i)=>{ let c=document.createElement('div'); c.style.cssText='background:#1a232e;padding:20px;border-radius:16px;margin-bottom:15px;'; c.innerHTML=`<div>${m.name}</div><div>${m.mode} | ${m.date}</div><button class="match-join" data-i="${i}">Подключиться</button>`; cont.appendChild(c); });
+        matchContent.innerHTML=''; matchContent.appendChild(cont);
+        document.querySelectorAll('.match-join').forEach(b=>b.addEventListener('click',function(){ let m=matches[+this.dataset.i]; if(!curUser) return alert('Войди!'); if(!m.players) m.players=[]; if(!m.players.includes(curUser.nick)){ m.players.push(curUser.nick); localStorage.setItem('m',JSON.stringify(matches)); } alert(`Ты в матче "${m.name}"!\nУчастники: ${m.players.join(', ')}`); }));
+    }
+    document.querySelectorAll('[data-match]').forEach(s=>s.addEventListener('click',function(){ showMatch(this.dataset.match); }));
+    document.addEventListener('click',e=>{ if(e.target.id==='createMatchBtn'){ let name=document.getElementById('matchName')?.value.trim(), mode=document.getElementById('matchMode')?.value, date=document.getElementById('matchDate')?.value; if(!name||!date) return alert('Заполни'); matches.push({name,mode,date,players:curUser?[curUser.nick]:[]}); localStorage.setItem('m',JSON.stringify(matches)); showMatch('find'); }});
+
+    document.querySelectorAll('[data-soul]').forEach(s=>s.addEventListener('click',function(){ document.querySelectorAll('[data-soul]').forEach(s=>s.classList.remove('active')); this.classList.add('active'); renderSoul(this.dataset.soul); }));
+
+    // Админка
+    let adminMode='users';
+    function renderAdmin(){
+        let cont = document.getElementById('adminContent');
+        if(adminMode==='users'){ cont.innerHTML = users.map(u=>`<div style="display:flex; justify-content:space-between; padding:10px; background:#1a232e; border-radius:8px; margin-bottom:5px;"><span>${u.nick} ${u.admin?'👑':''}</span><span>💙 ${u.souls||0}</span></div>`).join(''); }
+        else if(adminMode==='souls'){ cont.innerHTML = `<div style="display:grid; gap:10px;">${users.map(u=>`<div style="display:flex; justify-content:space-between; align-items:center; background:#1a232e; padding:10px; border-radius:8px;"><span>${u.nick}</span><div><input type="number" id="souls_${u.nick}" placeholder="Сумма" style="width:100px; padding:8px; margin-right:10px;"><button class="give-souls" data-nick="${u.nick}" style="background:var(--accent); border:0; padding:8px 15px; border-radius:20px;">Выдать</button></div></div>`).join('')}</div>`; document.querySelectorAll('.give-souls').forEach(b=>b.addEventListener('click', function(){ let nick = this.dataset.nick; let amount = parseInt(document.getElementById('souls_'+nick)?.value); if(!amount || amount<=0) return alert('Введи сумму'); let u = users.find(u=>u.nick===nick); u.souls = (u.souls||0) + amount; localStorage.setItem('u', JSON.stringify(users)); renderAdmin(); if(curUser.nick === nick) updateUI(); })); }
+        else if(adminMode==='admins'){ cont.innerHTML = users.map(u=>`<div style="display:flex; justify-content:space-between; padding:10px; background:#1a232e; border-radius:8px; margin-bottom:5px;"><span>${u.nick} ${u.admin?'👑':''}</span><button data-nick="${u.nick}" class="toggle-admin" style="background:var(--accent);border:0;padding:4px 12px;border-radius:20px;">${u.admin?'Снять':'Сделать'} админом</button></div>`).join(''); document.querySelectorAll('.toggle-admin').forEach(b=>b.addEventListener('click',function(){ let u = users.find(u=>u.nick===this.dataset.nick); if(u.nick===curUser.nick) return alert('Себя нельзя!'); u.admin = !u.admin; localStorage.setItem('u',JSON.stringify(users)); renderAdmin(); updateUI(); })); }
+        else if(adminMode==='mutes'){ cont.innerHTML = users.map(u=>`<div style="display:flex; justify-content:space-between; padding:10px; background:#1a232e; border-radius:8px; margin-bottom:5px;"><span>${u.nick}</span><button data-nick="${u.nick}" class="toggle-mute" style="background:${mutedUsers.includes(u.nick)?'#e74c3c':'var(--accent)'};border:0;padding:4px 12px;border-radius:20px;">${mutedUsers.includes(u.nick)?'Размутить':'Замутить'}</button></div>`).join(''); document.querySelectorAll('.toggle-mute').forEach(b=>b.addEventListener('click',function(){ let nick = this.dataset.nick; if(mutedUsers.includes(nick)) mutedUsers = mutedUsers.filter(n=>n!==nick); else mutedUsers.push(nick); localStorage.setItem('muted',JSON.stringify(mutedUsers)); renderAdmin(); })); }
+    }
+    document.querySelectorAll('[data-admin]').forEach(s=>s.addEventListener('click',function(){ adminMode = this.dataset.admin; document.querySelectorAll('[data-admin]').forEach(s=>s.classList.remove('active')); this.classList.add('active'); renderAdmin(); }));
+    document.getElementById('adminPanelBtn').addEventListener('click',()=>{ document.getElementById('adminPanel').classList.add('visible'); renderAdmin(); });
+    document.getElementById('closeAdmin').addEventListener('click',()=>document.getElementById('adminPanel').classList.remove('visible'));
+
+    // Авторизация
+    let authMode='login';
+    document.getElementById('loginBtn').addEventListener('click',()=>{ authMode='login'; document.getElementById('authTitle').textContent='ВХОД'; authPanel.classList.add('visible'); });
+    document.getElementById('regBtn').addEventListener('click',()=>{ authMode='register'; document.getElementById('authTitle').textContent='РЕГИСТРАЦИЯ'; authPanel.classList.add('visible'); });
+    document.getElementById('authToggle').addEventListener('click',e=>{ e.preventDefault(); authMode=authMode==='login'?'register':'login'; document.getElementById('authTitle').textContent=authMode==='login'?'ВХОД':'РЕГИСТРАЦИЯ'; });
+    document.getElementById('togglePass').addEventListener('click',()=>{ let p=document.getElementById('authPass'); p.type=p.type==='password'?'text':'password'; });
+    document.getElementById('closeAuth').addEventListener('click',()=>authPanel.classList.remove('visible'));
+    document.getElementById('authSubmit').addEventListener('click',()=>{
+        let n=document.getElementById('authNick').value.trim(), p=document.getElementById('authPass').value;
+        if(!n||!p){ document.getElementById('authErr').textContent='Заполни'; return; }
+        if(authMode==='register'){ if(users.some(u=>u.nick===n)){ document.getElementById('authErr').textContent='Занят'; return; } users.push({nick:n,pass:p,admin:false,souls:100,streak:0,lastClaim:null, avatar:'', wall:[]}); localStorage.setItem('u',JSON.stringify(users)); curUser={nick:n,admin:false}; localStorage.setItem('cur',JSON.stringify(curUser)); updateUI(); authPanel.classList.remove('visible'); }
+        else { let u=users.find(u=>u.nick===n&&u.pass===p); if(!u){ document.getElementById('authErr').textContent='Неверно'; return; } curUser={nick:u.nick,admin:u.admin}; localStorage.setItem('cur',JSON.stringify(curUser)); updateUI(); authPanel.classList.remove('visible'); }
+    });
+    document.getElementById('logoutBtn').addEventListener('click',()=>{ curUser=null; localStorage.removeItem('cur'); updateUI(); });
+    document.getElementById('settingsBtn').addEventListener('click',()=>settingsPanel.classList.add('visible'));
+    document.getElementById('closeSettings').addEventListener('click',()=>settingsPanel.classList.remove('visible'));
+    document.getElementById('logoutSettings').addEventListener('click',()=>{ curUser=null; localStorage.removeItem('cur'); updateUI(); settingsPanel.classList.remove('visible'); });
+    document.getElementById('changeNick').addEventListener('click',()=>{ let nn=document.getElementById('newNick').value.trim(); if(!nn) return; if(users.some(u=>u.nick===nn && u.nick!==curUser.nick)){ document.getElementById('nickErr').textContent='Занят'; return; } let u=users.find(u=>u.nick===curUser.nick); u.nick=nn; localStorage.setItem('u',JSON.stringify(users)); curUser.nick=nn; localStorage.setItem('cur',JSON.stringify(curUser)); updateUI(); settingsPanel.classList.remove('visible'); });
+
+    document.getElementById('subContent').appendChild(document.getElementById('tpl-banpick').cloneNode(true));
+    document.getElementById('subContent').firstChild.classList.remove('hidden');
+    updateUI(); renderNews(); showRating('top'); renderChat();
+})();
+</script>
+</body>
+</html>
+
++++ index.html (修改后)
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DEADLOCK SIX7CUP</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=MedievalSharp&family=Cinzel:wght@400;700;900&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-yellow">
+
+<!-- 🌟 ГЛАВНЫЙ ЭКРАН (п.6) -->
+<div class="main-screen" id="mainScreen">
+    <div class="main-screen-bg"></div>
+    <div class="particles-container" id="mainParticles"></div>
+    <div class="main-content">
+        <div class="main-logo">SIX7CUP</div>
+        <div class="main-subtitle">ArchMother ⚔️ Hidden King</div>
+        <button class="main-enter-btn" id="enterBtn">ВОЙТИ В ИГРУ</button>
+    </div>
+    <div class="main-version">v2.6 • DEADLOCK TOURNAMENT PLATFORM</div>
+</div>
+
+<!-- 🔐 ЛЕНДИНГ (3 клика) -->
+<div class="landing" id="landing">
+    <div class="seal-container">
+        <div class="seal-rings"></div>
+        <div class="seal-rings"></div>
+        <div class="seal-rings"></div>
+        <button class="seal-btn" id="sealBtn"><span>СОРВАТЬ ПЕЧАТЬ</span></button>
+        <div class="seal-particles" id="sealParticles"></div>
+    </div>
+    <div class="click-counter" id="counterText">Нажмите 3 раза для входа</div>
+    <div class="click-dots" id="clickDots">
+        <div class="click-dot"></div>
+        <div class="click-dot"></div>
+        <div class="click-dot"></div>
+    </div>
+</div>
+
+<div class="overlay" id="overlay"><div class="overlay-msg" id="overlayMsg"></div></div>
+
+<div class="app" id="app">
+    <!-- 📐 БОКОВАЯ ПАНЕЛЬ (п.4) -->
+    <div class="sidebar">
+        <div class="sidebar-logo" id="sidebarLogo">⚜️</div>
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-btn active" data-tab="news">
+            🗞️
+            <div class="sidebar-tooltip">Новости</div>
+        </div>
+        <div class="sidebar-btn" data-tab="rating">
+            🏅
+            <div class="sidebar-tooltip">Рейтинг</div>
+        </div>
+        <div class="sidebar-btn" data-tab="tournament">
+            🏆
+            <div class="sidebar-tooltip">Турнир</div>
+        </div>
+        <div class="sidebar-btn" data-tab="match">
+            ⚔️
+            <div class="sidebar-tooltip">Матчи</div>
+        </div>
+        <div class="sidebar-btn" data-tab="info">
+            📚
+            <div class="sidebar-tooltip">Инфо</div>
+        </div>
+        <div style="flex:1"></div>
+        <div class="sidebar-btn" data-tab="souls">
+            ✨
+            <div class="sidebar-tooltip">Души</div>
+        </div>
+        <div class="sidebar-btn" id="settingsBtn">
+            ⚙️
+            <div class="sidebar-tooltip">Настройки</div>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="header">
+            <div class="logo-section">
+                <h1><span id="themeEmoji">⚜️</span> SIX7CUP</h1>
+                <span class="medieval">ArchMother ⚔️ Hidden King</span>
+            </div>
+            <div class="auth-area">
+                <div id="loggedOut">
+                    <button class="auth-btn" id="loginBtn">🔐 Войти</button>
+                    <button class="auth-btn" id="regBtn">📝 Регистрация</button>
+                </div>
+                <div id="loggedIn" class="user-info hidden" style="display:flex;align-items:center;gap:0.75rem;">
+                    <span class="soul-display">💎 <span id="soulAmount">0</span></span>
+                    <span class="user-nick" id="userNick"></span>
+                    <span id="adminBadge" style="background:var(--accent);color:var(--bg-primary);padding:0.2rem 0.7rem;border-radius:var(--radius-full);font-size:0.75rem;font-weight:600;" class="hidden">ADMIN</span>
+                    <div class="settings-inline">
+                        <button class="settings-btn-inline" id="settingsBtnInline" title="Настройки">⚙️</button>
+                        <button class="auth-btn" id="logoutBtn">🚪</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="content" id="contentArea">
+            <div id="tab-news"><div id="newsContent" class="news-grid"></div></div>
+            <div id="tab-rating" class="hidden">
+                <div class="sub-tabs"><div class="sub-tab active" data-rating="top">🏅 Топ</div><div class="sub-tab" data-rating="system">📊 Система</div></div>
+                <div id="ratingContent"></div>
+            </div>
+            <div id="tab-tournament" class="hidden"><div class="empty-state"><div class="empty-state-icon">🏁</div><p>Турнирная сетка появится позже</p></div></div>
+            <div id="tab-match" class="hidden">
+                <div class="sub-tabs"><div class="sub-tab active" data-match="find">🔍 Найти</div><div class="sub-tab" data-match="create">➕ Создать</div></div>
+                <div id="matchContent"></div>
+            </div>
+            <div id="tab-info" class="hidden">
+                <div class="sub-tabs"><div class="sub-tab active" data-sub="banpick">Бан/Пик</div><div class="sub-tab" data-sub="cap">Кто такой кэп</div><div class="sub-tab" data-sub="pick">Пик игроков</div></div>
+                <div id="subContent"></div>
+            </div>
+            <div id="tab-souls" class="hidden">
+                <div class="sub-tabs"><div class="sub-tab active" data-soul="daily">🎁 Ежедневные</div><div class="sub-tab" data-soul="bet">🎲 Ставки</div><div class="sub-tab" data-soul="blackjack">🃏 Блекджек</div><div class="sub-tab" data-soul="dice">🎲 Кубик</div></div>
+                <div id="soulContent"></div>
+            </div>
+            <div id="tab-profile" class="hidden"><div id="profileContent"></div></div>
+        </div>
+
+        <div class="footer">
+            <div class="quotes">
+                <span>«6 героев. 7 грехов. 0 шансов»</span>
+                <span>«67 — не возраст, это диагноз»</span>
+                <span>«Мидбосс — мой единственный друг»</span>
+            </div>
+            <div class="signature">— <span id="signatureName">Barry Dylan</span></div>
+        </div>
+    </div>
+</div>
+
+<!-- 💬 ЧАТ -->
+<div class="chat-container chat-minimized" id="chatContainer">
+    <div class="chat-header" id="chatHeader"><span>💬 Чат</span>
+        <div class="chat-controls">
+            <button class="close-chat-btn" id="closeChatBtn" title="Закрыть">✕</button>
+            <button class="resize-btn" id="resizeChatBtn" title="Размер">◫</button>
+            <button class="expand-btn" id="expandChatBtn" title="Развернуть">⤢</button>
+        </div>
+    </div>
+    <div class="chat-messages" id="chatMessages"></div>
+    <div class="chat-input-area">
+        <input type="text" class="chat-input" id="chatInput" placeholder="Сообщение...">
+        <input type="file" id="chatImageInput" accept="image/*" style="display:none;">
+        <button class="chat-send" id="attachImageBtn" title="Картинка">📎</button>
+        <button class="chat-send" id="chatSend" title="Отправить">➤</button>
+    </div>
+</div>
+
+<!-- ШАБЛОНЫ -->
+<div id="tpl-banpick" class="hidden">
+    <table class="banpick-table">
+        <tr><th>Этап</th><th>Действие</th><th>Кто</th></tr>
+        <tr><td>1</td><td>Бан #1</td><td style="color:#64b5f6;">А</td></tr><tr><td>2</td><td>Бан #2</td><td style="color:#ff8a65;">Б</td></tr>
+        <tr><td>3</td><td>Пик #1</td><td style="color:#ff8a65;">Б</td></tr><tr><td>4</td><td>Пик #2-3</td><td style="color:#64b5f6;">А</td></tr>
+        <tr><td>5</td><td>Бан #3</td><td style="color:#64b5f6;">А</td></tr><tr><td>6</td><td>Бан #4</td><td style="color:#ff8a65;">Б</td></tr>
+        <tr><td>7</td><td>Пик #4-5</td><td style="color:#ff8a65;">Б</td></tr><tr><td>8</td><td>Пик #6-7</td><td style="color:#64b5f6;">А</td></tr>
+        <tr><td>9</td><td>Бан #5</td><td style="color:#64b5f6;">А</td></tr><tr><td>10</td><td>Бан #6</td><td style="color:#ff8a65;">Б</td></tr>
+        <tr><td>11</td><td>Пик #8-9</td><td style="color:#ff8a65;">Б</td></tr><tr><td>12</td><td>Пик #10-11</td><td style="color:#64b5f6;">А</td></tr>
+        <tr><td>13</td><td>Пик #12</td><td style="color:#ff8a65;">Б</td></tr>
+    </table>
+</div>
+
+<div id="tpl-cap" class="hidden">
+    <div class="cap-info">
+        <p><span style="color:var(--accent-light);font-weight:600;">Капитан (кэп)</span> — лидер команды, принимающий финальные решения.</p>
+        <div class="cap-grid">
+            <div class="cap-section"><h4>🗣️ Обязанности кэпа:</h4><ul><li>Кидает монетку за команду</li><li>Называет баны</li><li>Называет пики</li><li>Следит за таймером</li></ul></div>
+            <div class="cap-section"><h4>👥 Остальные игроки:</h4><ul><li>Предлагают варианты</li><li>Советуются в голосовом</li><li>Доверяют кэпу</li><li>Готовы на любом герое</li></ul></div>
+        </div>
+        <div class="cap-tip"><span>💡 Совет:</span> Выберите кэпа до турнира. Не можете договориться — киньте монетку.</div>
+    </div>
+</div>
+
+<div id="tpl-pick" class="hidden">
+    <div class="cap-info">
+        <p>Система пика <span style="color:var(--accent-light);font-weight:600;">игроков</span> определяет порядок выбора.</p>
+        <div class="pick-sequence">
+            <div class="pick-step team1">1</div><span class="pick-arrow">→</span><div class="pick-step team2">2</div><span class="pick-arrow">→</span>
+            <div class="pick-step team1">1</div><span class="pick-arrow">→</span><div class="pick-step team2">2</div><span class="pick-arrow">→</span>
+            <div class="pick-step team1">1</div><span class="pick-arrow">→</span><div class="pick-step team2">2</div><span class="pick-arrow">→</span>
+            <div class="pick-step team1">1</div><span class="pick-arrow">→</span><div class="pick-step team2">2</div><span class="pick-arrow">→</span>
+            <div class="pick-step team2">2</div><span class="pick-arrow">→</span><div class="pick-step team1">1</div>
+        </div>
+        <p class="pick-legend"><span style="color:#93c5fd;">1</span> — первый кэп, <span style="color:#fca5a5;">2</span> — второй кэп</p>
+        <div class="pick-note">Первая команда получает первый выбор, вторая — два выбора подряд в конце.</div>
+    </div>
+</div>
+
+<div id="tpl-top" class="hidden">
+    <table class="rating-table">
+        <tr><th>Место</th><th>Игрок</th><th>Очки</th><th>Ранг</th></tr>
+        <tr><td>1</td><td>DanBrosCrut</td><td>18349</td><td><span class="rank-badge eternus">ETERNUS</span></td></tr>
+        <tr><td>2</td><td>Nair</td><td>14984</td><td><span class="rank-badge oracle">ORACLE</span></td></tr>
+        <tr><td>3</td><td>Barry Dylan</td><td>14025</td><td><span class="rank-badge oracle">ORACLE</span></td></tr>
+        <tr><td>4</td><td>kulttisurita</td><td>13952</td><td><span class="rank-badge oracle">ORACLE</span></td></tr>
+        <tr><td>5</td><td>Rafaelka_0</td><td>12626</td><td><span class="rank-badge archon">ARCHON</span></td></tr>
+        <tr><td>6</td><td>Syxarik</td><td>12004</td><td><span class="rank-badge archon">ARCHON</span></td></tr>
+        <tr><td>7</td><td>KjRj</td><td>8059</td><td><span class="rank-badge ritualist">RITUALIST</span></td></tr>
+        <tr><td>8</td><td>rb4ka</td><td>7669</td><td><span class="rank-badge arcanist">ARCANIST</span></td></tr>
+        <tr><td>9</td><td>shtefan_nein</td><td>7164</td><td><span class="rank-badge arcanist">ARCANIST</span></td></tr>
+        <tr><td>10</td><td>Matt</td><td>6917</td><td><span class="rank-badge alchemist">ALCHEMIST</span></td></tr>
+        <tr><td>11</td><td>allmutekotek</td><td>6415</td><td><span class="rank-badge alchemist">ALCHEMIST</span></td></tr>
+    </table>
+</div>
+
+<div id="tpl-system" class="hidden">
+    <div style="background:var(--bg-tertiary);padding:1.75rem;border-radius:var(--radius-md);border:1px solid var(--card-border);">
+        <p style="margin-bottom:1.25rem;">Рейтинг на основе статистики матчей. Каждому параметру присваивается коэффициент.</p>
+        <h3 style="margin:1.5rem 0 1rem;color:var(--accent-light);font-size:1.2rem;">📋 Таблица рангов</h3>
+        <table class="system-table">
+            <tr><th>Ранг</th><th>Очки</th></tr>
+            <tr><td><span class="rank-badge-small cursed">CURSED</span></td><td>20000</td></tr><tr><td><span class="rank-badge-small eternus">ETERNUS</span></td><td>18000</td></tr>
+            <tr><td><span class="rank-badge-small ascendant">ASCENDANT</span></td><td>17000</td></tr><tr><td><span class="rank-badge-small phantom">PHANTOM</span></td><td>15000</td></tr>
+            <tr><td><span class="rank-badge-small oracle">ORACLE</span></td><td>13000</td></tr><tr><td><span class="rank-badge-small archon">ARCHON</span></td><td>11000</td></tr>
+            <tr><td><span class="rank-badge-small emissary">EMISSARY</span></td><td>10000</td></tr><tr><td><span class="rank-badge-small ritualist">RITUALIST</span></td><td>8000</td></tr>
+            <tr><td><span class="rank-badge-small arcanist">ARCANIST</span></td><td>7000</td></tr><tr><td><span class="rank-badge-small alchemist">ALCHEMIST</span></td><td>5000</td></tr>
+            <tr><td><span class="rank-badge-small seeker">SEEKER</span></td><td>4000</td></tr><tr><td><span class="rank-badge-small initiate">INITIATE</span></td><td>2000</td></tr>
+        </table>
+    </div>
+</div>
+
+<div id="tpl-find-match" class="hidden"><div id="matchesList"></div></div>
+<div id="tpl-create-match" class="hidden">
+    <div style="background:var(--bg-tertiary);padding:1.75rem;border-radius:var(--radius-md);border:1px solid var(--card-border);">
+        <h3 style="color:var(--accent-light);margin-bottom:1.25rem;">➕ Создать матч</h3>
+        <div class="match-form">
+            <input type="text" id="matchName" placeholder="Название"><select id="matchMode"><option>6x6 обычная</option><option>4x4 уличная</option><option>2x2 уличная</option><option>3x3 уличная</option></select>
+            <input type="datetime-local" id="matchDate"><button id="createMatchBtn" class="game-btn">✨ Создать</button>
+        </div>
+    </div>
+</div>
+
+<!-- МОДАЛКИ -->
+<div id="authPanel" class="overlay-panel">
+    <div class="panel-content">
+        <h2 id="authTitle">ВХОД</h2>
+        <input type="text" id="authNick" placeholder="Никнейм">
+        <div class="password-wrapper"><input type="password" id="authPass" placeholder="Пароль"><button id="togglePass" class="password-toggle">👁️</button></div>
+        <p id="authErr" class="error-msg"></p>
+        <button id="authSubmit" class="panel-btn" style="width:100%;padding:0.9rem;">Войти</button>
+        <div class="auth-toggle"><span id="authToggleText">Нет аккаунта?</span> <a href="#" id="authToggle">Зарегистрироваться</a></div>
+        <div class="signature-divider"></div>
+        <button id="closeAuth" class="panel-btn secondary" style="width:100%;padding:0.75rem;">Закрыть</button>
+    </div>
+</div>
+
+<div id="settingsPanel" class="overlay-panel">
+    <div class="panel-content">
+        <h2>⚙️ НАСТРОЙКИ</h2>
+        <h3>Тема оформления</h3>
+        <div class="toggle-container">
+            <span class="toggle-label">🌙 Тёмная</span>
+            <label class="toggle-switch">
+                <input type="checkbox" id="darkModeToggle">
+                <span class="toggle-slider"></span>
+            </label>
+            <span class="toggle-label">☀️ Светлая</span>
+        </div>
+        <h3>Цветовая схема</h3>
+        <div class="theme-selector">
+            <!-- ✅ ЭМОДЗИ ПО ЦВЕТАМ (п.2) -->
+            <div class="theme-dot yellow active" data-theme="yellow" title="Золотая">⚜️</div>
+            <div class="theme-dot ruby" data-theme="ruby" title="Рубиновая">🔥</div>
+            <div class="theme-dot emerald" data-theme="emerald" title="Изумрудная">🌿</div>
+            <div class="theme-dot sapphire" data-theme="sapphire" title="Сапфировая">🌊</div>
+            <div class="theme-dot terracotta" data-theme="terracotta" title="Терракотовая">🌅</div>
+            <div class="theme-dot turquoise" data-theme="turquoise" title="Бирюзовая">🧿</div>
+            <div class="theme-dot lavender" data-theme="lavender" title="Лавандовая">🔮</div>
+            <div class="theme-dot pearl" data-theme="pearl" title="Перламутровая">🌙</div>
+        </div>
+        <button id="saveTheme" class="panel-btn" style="width:100%;padding:0.85rem;">💾 Сохранить</button>
+        <div class="signature-divider"></div>
+        <h3>Смена ника</h3>
+        <input type="text" id="newNick" placeholder="Новый ник"><p id="nickErr" class="error-msg"></p>
+        <button id="changeNick" class="panel-btn" style="width:100%;padding:0.85rem;margin-top:0.5rem;">✏️ Сменить</button>
+        <button id="adminPanelBtn" class="panel-btn" style="width:100%;padding:0.85rem;margin-top:0.5rem;background:#7e57c2;" class="hidden">👑 Админ</button>
+        <div class="panel-actions">
+            <button id="logoutSettings" class="panel-btn danger">🚪 Выйти</button>
+            <button id="closeSettings" class="panel-btn secondary">Закрыть</button>
+        </div>
+    </div>
+</div>
+
+<div id="adminPanel" class="overlay-panel">
+    <div class="panel-content" style="max-width:650px;">
+        <h2>👑 Админ-панель</h2>
+        <div class="admin-panel-tabs">
+            <div class="admin-tab active" data-admin="users">Пользователи</div>
+            <div class="admin-tab" data-admin="souls">Души</div>
+            <div class="admin-tab" data-admin="admins">Права</div>
+            <div class="admin-tab" data-admin="mutes">Мут</div>
+        </div>
+        <div id="adminContent" class="admin-content"></div>
+        <button id="closeAdmin" class="panel-btn secondary" style="width:100%;padding:0.75rem;margin-top:1.25rem;">Закрыть</button>
+    </div>
+</div>
+
+
+    <script src="script.js"></script>
+</body>
+</html>
