@@ -546,7 +546,8 @@
     document.getElementById('closeAdmin').addEventListener('click',()=>document.getElementById('adminPanel').classList.remove('visible'));
 
     // ===== ДИНАМИЧНАЯ КНОПКА ПЕЧАТИ (п.5) =====
-    let sealClicks=0, audioCtx=null;
+    let sealClicks = 0;
+    let audioCtx = null;
 
     function playScarySound(){
         try{
